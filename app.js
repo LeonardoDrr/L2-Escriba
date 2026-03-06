@@ -346,39 +346,39 @@ function dashboard() {
 
   document.getElementById("content").innerHTML = `
     <div class="stats-grid">
-      <div class="stat-card" onclick="navigate('members')" style="cursor:pointer">
+      <div class="stat-card" onclick="window.navigate('members')" style="cursor:pointer">
         <div class="stat-icon"><i class="ri-group-line"></i></div><div class="stat-label">Miembros Activos</div>
         <div class="stat-value">${activeMembers}</div><div class="stat-sub">${STATE.members.length} total</div>
       </div>
-      <div class="stat-card" onclick="navigate('warehouse')" style="cursor:pointer">
+      <div class="stat-card" onclick="window.navigate('warehouse')" style="cursor:pointer">
         <div class="stat-icon"><i class="ri-archive-2-line"></i></div><div class="stat-label">Items en Almacén</div>
         <div class="stat-value">${totalItems}</div>
       </div>
-      <div class="stat-card" onclick="navigate('loans')" style="cursor:pointer">
+      <div class="stat-card" onclick="window.navigate('loans')" style="cursor:pointer">
         <div class="stat-icon"><i class="ri-hand-coin-line"></i></div><div class="stat-label">Préstamos Activos</div>
         <div class="stat-value" style="${activeLoans > 0 ? 'color:var(--red)' : ''}">${activeLoans}</div>
       </div>
-      <div class="stat-card" onclick="navigate('treasury')" style="cursor:pointer">
+      <div class="stat-card" onclick="window.navigate('treasury')" style="cursor:pointer">
         <div class="stat-icon"><i class="ri-coins-line"></i></div><div class="stat-label">Balance Tesorería</div>
         <div class="stat-value" style="font-size:1.1rem;${balance < 0 ? 'color:var(--red)' : ''}">${fmt(balance)}</div>
         <div class="stat-sub">Adena</div>
       </div>
-      <div class="stat-card" onclick="navigate('crafts')" style="cursor:pointer">
+      <div class="stat-card" onclick="window.navigate('crafts')" style="cursor:pointer">
         <div class="stat-icon"><i class="ri-hammer-line"></i></div><div class="stat-label">Crafts en Progreso</div>
         <div class="stat-value">${activeCrafts}</div>
       </div>
-      <div class="stat-card" onclick="navigate('events')" style="cursor:pointer">
+      <div class="stat-card" onclick="window.navigate('events')" style="cursor:pointer">
         <div class="stat-icon"><i class="ri-calendar-event-line"></i></div><div class="stat-label">Eventos</div>
         <div class="stat-value">${totalEvents}</div>
       </div>
     </div>
     ${alerts ? `<div style="margin-bottom:16px">${alerts}</div>` : ""}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div class="card" onclick="navigate('events'); setTimeout(()=>window.showRanking && window.showRanking(), 50)" style="cursor:pointer" title="Ver tabla de puntos">
+      <div class="card" onclick="window.navigate('events'); setTimeout(()=>window.showRanking && window.showRanking(), 50)" style="cursor:pointer" title="Ver tabla de puntos">
         <div class="card-title"><i class="ri-trophy-line"></i> ${STATE.isAdmin ? 'Top Miembros por Puntos' : 'Clasificación de Participación'} <i class="ri-arrow-right-s-line" style="margin-left:auto;opacity:.5"></i></div>
         ${lb}
       </div>
-      <div class="card" onclick="navigate('loans')" style="cursor:pointer" title="Ver actividad">
+      <div class="card" onclick="window.navigate('loans')" style="cursor:pointer" title="Ver actividad">
         <div class="card-title"><i class="ri-history-line"></i> Actividad Reciente <i class="ri-arrow-right-s-line" style="margin-left:auto;opacity:.5"></i></div>
         ${recentActivity()}
       </div>
