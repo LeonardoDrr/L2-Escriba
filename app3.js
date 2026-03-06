@@ -9,6 +9,7 @@ const { STATE, saveFireDoc, delFireDoc, openModal, closeModal, toast } = window;
 
 // ── VISTA PRINCIPAL (GESTIÓN DB) ──────────────────────────
 window.dbmanager = function (isRender = true) {
+  window._dbSelected = window._dbSelected || [];
   const q = (document.getElementById("db-search")?.value || "").toLowerCase();
   const fCat = document.getElementById("db-cat")?.value || "";
   const fGrade = document.getElementById("db-grade")?.value || "";
@@ -26,23 +27,29 @@ window.dbmanager = function (isRender = true) {
     const catLabel = CATEGORY_LABELS[i.category] || i.category;
     let badge = "";
     if (isCraft) badge = '<span class="badge badge-gold" title="Crafteable/Recipe"><i class="ri-magic-line"></i></span>';
+    const isChecked = window._dbSelected.includes(i.id) ? 'checked' : '';
 
     return `<tr>
+      <td style="width:40px;text-align:center">
+        <input type="checkbox" ${isChecked} onchange="window.dbToggleSelect('${i.id}')" style="cursor:pointer" title="Seleccionar">
+      </td>
       <td><span class="grade-${i.grade || 'NG'}" style="font-size:0.7rem">[${i.grade || 'NG'}]</span> <b>${i.name}</b> ${badge}</td>
       <td style="color:var(--text2)">${catLabel} / ${i.type || 'N/A'}</td>
       <td style="width:100px;text-align:right">
-        <button class="btn btn-ghost btn-icon btn-sm" onclick="editGlobalItem('${i.id}')" title="Editar"><i class="ri-edit-line"></i></button>
-        <button class="btn btn-danger btn-icon btn-sm" onclick="delGlobalItem('${i.id}')" title="Eliminar"><i class="ri-delete-bin-line"></i></button>
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="window.editGlobalItem('${i.id}')" title="Editar"><i class="ri-edit-line"></i></button>
+        <button class="btn btn-danger btn-icon btn-sm" onclick="window.delGlobalItem('${i.id}')" title="Eliminar"><i class="ri-delete-bin-line"></i></button>
       </td>
     </tr>`;
-  }).join("") || `<tr><td colspan="3"><div class="empty-state"><i class="ri-database-2-line"></i><p>No se encontraron ítems</p></div></td></tr>`;
+  }).join("") || `<tr><td colspan="4"><div class="empty-state"><i class="ri-database-2-line"></i><p>No se encontraron ítems</p></div></td></tr>`;
+
+  const allSelected = list.length > 0 && list.every(i => window._dbSelected.includes(i.id));
 
   // Si es primer render, crear la interfaz completa
   if (isRender || !document.getElementById("db-table-body")) {
     document.getElementById("content").innerHTML = `
         <div class="filters">
-          <input class="search-input" id="db-search" placeholder="🔍 Buscar item..." oninput="dbmanager(false)" value="${q}">
-          <select class="filter-sel" id="db-cat" onchange="dbmanager(false)">
+          <input class="search-input" id="db-search" placeholder="🔍 Buscar item..." oninput="window.dbmanager(false)" value="${q}">
+          <select class="filter-sel" id="db-cat" onchange="window.dbmanager(false)">
             <option value="">Todas las Categorías</option>
             <option value="weapon">Armas</option>
             <option value="armor">Armaduras</option>
@@ -51,7 +58,7 @@ window.dbmanager = function (isRender = true) {
             <option value="recipe">Recetas</option>
             <option value="consumable">Consumibles</option>
           </select>
-          <select class="filter-sel" id="db-grade" onchange="dbmanager(false)">
+          <select class="filter-sel" id="db-grade" onchange="window.dbmanager(false)">
             <option value="">Todos los Grados</option>
             <option value="NG">NG</option>
             <option value="D">D</option>
@@ -63,10 +70,11 @@ window.dbmanager = function (isRender = true) {
             <option value="S84">S84</option>
           </select>
           <span id="db-count" style="margin-left:auto;color:var(--text3);font-size:.8rem">${list.length} registros</span>
+          <button id="btn-db-del-sel" class="btn btn-danger btn-sm" style="display:${window._dbSelected.length > 0 ? 'flex' : 'none'};gap:5px;margin-left:10px" onclick="window.dbDeleteSelected()"><i class="ri-delete-bin-fill"></i> Borrar (${window._dbSelected.length})</button>
         </div>
     
         ${STATE.globalItems.length === 0 ? `
-        <div class="alert-card alert-warn" style="margin-bottom:15px;cursor:pointer" onclick="seedDatabase()">
+        <div class="alert-card alert-warn" style="margin-bottom:15px;cursor:pointer" onclick="window.seedDatabase()">
           <i class="ri-upload-cloud-2-line"></i> 
           <div><b>Atención: Base de Datos Firebase Vacía.</b><br>
           Haz click aquí para subir (Seed) toda la base de datos fija local (items+crafteos) a Firebase por primera vez. Esto transfiere todos los ítems para que todos los usuarios los consuman desde la nube.</div>
@@ -74,7 +82,12 @@ window.dbmanager = function (isRender = true) {
     
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Item</th><th>Categoría / Tipo</th><th></th></tr></thead>
+            <thead><tr>
+              <th style="width:40px;text-align:center">
+                <input type="checkbox" id="db-select-all" ${allSelected ? 'checked' : ''} onchange="window.dbToggleSelectAll()" style="cursor:pointer" title="Seleccionar/Deseleccionar todos">
+              </th>
+              <th>Item</th><th>Categoría / Tipo</th><th></th>
+            </tr></thead>
             <tbody id="db-table-body">${rows}</tbody>
           </table>
         </div>
@@ -83,8 +96,79 @@ window.dbmanager = function (isRender = true) {
     // Solo actualizar la tabla y el contador para no perder el foco del input
     document.getElementById("db-table-body").innerHTML = rows;
     document.getElementById("db-count").textContent = `${list.length} registros`;
+
+    const btnDel = document.getElementById("btn-db-del-sel");
+    if (btnDel) {
+      if (window._dbSelected.length > 0) {
+        btnDel.style.display = 'flex';
+        btnDel.innerHTML = `<i class="ri-delete-bin-fill"></i> Borrar (${window._dbSelected.length})`;
+      } else {
+        btnDel.style.display = 'none';
+      }
+    }
+    const selectAllChx = document.getElementById("db-select-all");
+    if (selectAllChx) selectAllChx.checked = allSelected;
   }
 }
+
+// ── LÓGICA DE SELECCIÓN DB MANAGER ────────────────────────
+window.dbToggleSelect = (id) => {
+  window._dbSelected = window._dbSelected || [];
+  if (window._dbSelected.includes(id)) {
+    window._dbSelected = window._dbSelected.filter(x => x !== id);
+  } else {
+    window._dbSelected.push(id);
+  }
+  window.dbmanager(false);
+};
+
+window.dbToggleSelectAll = () => {
+  window._dbSelected = window._dbSelected || [];
+  const q = (document.getElementById("db-search")?.value || "").toLowerCase();
+  const fCat = document.getElementById("db-cat")?.value || "";
+  const fGrade = document.getElementById("db-grade")?.value || "";
+
+  const list = window.STATE.globalItems.filter(i => {
+    if (q && !i.name.toLowerCase().includes(q)) return false;
+    if (fCat && i.category !== fCat) return false;
+    if (fGrade && i.grade !== fGrade) return false;
+    return true;
+  });
+
+  const visibleIds = list.map(i => i.id);
+  const allSelected = visibleIds.length > 0 && visibleIds.every(id => window._dbSelected.includes(id));
+
+  if (allSelected) {
+    // Deselect all visible
+    window._dbSelected = window._dbSelected.filter(id => !visibleIds.includes(id));
+  } else {
+    // Select all visible
+    visibleIds.forEach(id => {
+      if (!window._dbSelected.includes(id)) window._dbSelected.push(id);
+    });
+  }
+  window.dbmanager(false);
+};
+
+window.dbDeleteSelected = async () => {
+  if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
+  if (!window._dbSelected || window._dbSelected.length === 0) return;
+  if (!confirm(`¿Estás 100% seguro de borrar ${window._dbSelected.length} ítems para SIEMPRE de la Base de Datos Global?`)) return;
+
+  const toDelete = [...window._dbSelected];
+  window.toast(`Borrando ${toDelete.length} ítems...`, "info");
+
+  try {
+    const promises = toDelete.map(id => window.delFireDoc("global_items", id));
+    await Promise.all(promises);
+    window.STATE.globalItems = window.STATE.globalItems.filter(i => !toDelete.includes(i.id));
+    window._dbSelected = [];
+    window.toast(`${toDelete.length} ítems eliminados correctamente`, "success");
+    window.dbmanager();
+  } catch (e) {
+    window.toast("Error borrando ítems: " + e.message, "error");
+  }
+};
 
 // ── CRUD ITEMS ────────────────────────────────────────────
 window.addGlobalItem = () => editGlobalItem(null);
