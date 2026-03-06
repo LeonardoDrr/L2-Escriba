@@ -330,9 +330,10 @@ window.acSearchDB = (q, inputId, listId) => {
   ).join("");
 
   // Botón "Crear nuevo si no existe"
+  const safeQ = q.replace(/'/g, "\\'").replace(/"/g, '&quot;');
   html += `
-    <div class="ac-item" style="border-top:1px solid var(--border); background:rgba(212, 160, 23, .05); color:var(--gold-light)" onclick="openNewMatMiniModal('${inputId}','${listId}','${q}')">
-      <i class="ri-add-circle-line"></i> ¿No existe? Crear "${q}"
+    <div class="ac-item" style="border-top:1px solid var(--border); background:rgba(212, 160, 23, .05); color:var(--gold-light)" onclick="openNewMatMiniModal('${inputId}','${listId}','${safeQ}', 'acSelectDB')">
+      <i class="ri-add-circle-line"></i> ¿No existe? Crear "${q.replace(/"/g, '&quot;')}"
     </div>
   `;
 
@@ -349,7 +350,7 @@ window.acSelectDB = (inputId, listId, name) => {
 };
 
 // ── MINI MODAL PARA CREAR MATERIAL RAPIDO ───────────────
-window.openNewMatMiniModal = (inputId, listId, tempName) => {
+window.openNewMatMiniModal = (inputId, listId, tempName, callbackFn = 'acSelectDB') => {
   document.getElementById(listId).classList.remove("show");
 
   // Reusaremos un confirm con promts simples o un HTML temporal para no pisar el Modal GIGANTE si se puede.
@@ -377,7 +378,7 @@ window.openNewMatMiniModal = (inputId, listId, tempName) => {
   window.saveFireDoc("global_items", null, data).then(docId => {
     data.id = docId;
     window.STATE.globalItems.push(data);
-    window.acSelectDB(inputId, listId, tempName);
+    if (window[callbackFn]) window[callbackFn](inputId, listId, tempName);
     window.toast(`"${tempName}" creado con éxito.`, "success");
   }).catch(e => window.toast("Error: " + e.message, "error"));
 };

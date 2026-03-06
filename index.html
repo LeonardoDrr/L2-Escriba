@@ -985,9 +985,17 @@
         function filterClasses() { if (window.filterClasses) window.filterClasses(); }
         function acSearch(q, iId, lId) { if (window.acSearch) window.acSearch(q, iId, lId); }
         function acPick(name, iId, lId) { if (window.acPick) window.acPick(name, iId, lId); }
+        function acSelect(iId, lId, name) { if (window.acSelect) window.acSelect(iId, lId, name); }
+        function acSearchDB(q, iId, lId) { if (window.acSearchDB) window.acSearchDB(q, iId, lId); }
+        function acSelectDB(iId, lId, name) { if (window.acSelectDB) window.acSelectDB(iId, lId, name); }
         function dbToggleSelect(id) { if (window.dbToggleSelect) window.dbToggleSelect(id); }
         function dbToggleSelectAll() { if (window.dbToggleSelectAll) window.dbToggleSelectAll(); }
         function dbDeleteSelected() { if (window.dbDeleteSelected) window.dbDeleteSelected(); }
+        function dbAddMatRow() { if (window.dbAddMatRow) window.dbAddMatRow(); }
+        function dbRmMatRow(idx) { if (window.dbRmMatRow) window.dbRmMatRow(idx); }
+        function dbUpdateMatStr(idx, val) { if (window.dbUpdateMatStr) window.dbUpdateMatStr(idx, val); }
+        function dbUpdateMatNum(idx, val) { if (window.dbUpdateMatNum) window.dbUpdateMatNum(idx, val); }
+        function openNewMatMiniModal(iId, lId, tempName, cb) { if (window.openNewMatMiniModal) window.openNewMatMiniModal(iId, lId, tempName, cb); }
     </script>
 
 </body>

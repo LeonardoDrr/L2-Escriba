@@ -161,9 +161,10 @@ window.acSearch = (q, inputId, listId) => {
 
   // Si window.openNewMatMiniModal existe (cargado desde app3.js), mostramos botón de crear
   if (window.openNewMatMiniModal) {
+    const safeQ = q.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     html += `
-      <div class="ac-item" style="border-top:1px solid var(--border); background:rgba(212, 160, 23, .05); color:var(--gold-light)" onclick="openNewMatMiniModal('${inputId}','${listId}','${q}')">
-        <i class="ri-add-circle-line"></i> ¿No existe? Crear "${q}"
+      <div class="ac-item" style="border-top:1px solid var(--border); background:rgba(212, 160, 23, .05); color:var(--gold-light)" onclick="openNewMatMiniModal('${inputId}','${listId}','${safeQ}', 'acSelect')">
+        <i class="ri-add-circle-line"></i> ¿No existe? Crear "${q.replace(/"/g, '&quot;')}"
       </div>
     `;
   }
