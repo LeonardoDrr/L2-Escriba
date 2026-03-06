@@ -938,6 +938,58 @@
     <script type="module" src="app.js"></script>
     <script type="module" src="app3.js"></script>
 
+    <!-- ╔══ PUENTES GLOBALES ══╗ Expone funciones de módulo al contexto global para onclick del HTML -->
+    <script>
+        // Espera a que app.js cargue y exponga window.navigate, luego crea alias globales
+        (function poll() {
+            if (window.navigate) {
+                // Ya expuesto — nada que hacer
+            } else {
+                setTimeout(poll, 50);
+            }
+        })();
+
+        // Funciones proxy que delegan a window.X cuando se llamen desde onclick=""
+        function navigate(page) { if (window.navigate) window.navigate(page); }
+        function handleAddClick() { if (window.handleAddClick) window.handleAddClick(); }
+        function cancelModalClick() { if (window.cancelModalClick) window.cancelModalClick(); }
+        function modalConfirm() { if (window.modalConfirm) window.modalConfirm(); }
+        function closeModal(e) { if (window.closeModal) window.closeModal(e); }
+        function renameClan() { if (window.renameClan) window.renameClan(); }
+        function toggleLogin() { if (window.toggleLogin) window.toggleLogin(); }
+        function editMember(id) { if (window.editMember) window.editMember(id); }
+        function delMember(id) { if (window.delMember) window.delMember(id); }
+        function showRanking() { if (window.showRanking) window.showRanking(); }
+        function showEvents() { if (window.showEvents) window.showEvents(); }
+        function events() { if (window.events) window.events(); }
+        function loans() { if (window.loans) window.loans(); }
+        function treasury() { if (window.treasury) window.treasury(); }
+        function warehouse() { if (window.warehouse) window.warehouse(); }
+        function crafts() { if (window.crafts) window.crafts(); }
+        function editWH(id) { if (window.editWH) window.editWH(id); }
+        function delWH(id) { if (window.delWH) window.delWH(id); }
+        function editCraft(id) { if (window.editCraft) window.editCraft(id); }
+        function delCraft(id) { if (window.delCraft) window.delCraft(id); }
+        function delTx(id) { if (window.delTx) window.delTx(id); }
+        function editLoan(id) { if (window.editLoan) window.editLoan(id); }
+        function delLoan(id) { if (window.delLoan) window.delLoan(id); }
+        function returnLoan(id) { if (window.returnLoan) window.returnLoan(id); }
+        function payInstallment(id) { if (window.payInstallment) window.payInstallment(id); }
+        function editEvent(id) { if (window.editEvent) window.editEvent(id); }
+        function delEvent(id) { if (window.delEvent) window.delEvent(id); }
+        function addLoanItemRow() { if (window.addLoanItemRow) window.addLoanItemRow(); }
+        function rmLoanItemRow(i) { if (window.rmLoanItemRow) window.rmLoanItemRow(i); }
+        function updLoanItemName(i, v) { if (window.updLoanItemName) window.updLoanItemName(i, v); }
+        function updLoanItemQty(i, v) { if (window.updLoanItemQty) window.updLoanItemQty(i, v); }
+        function toggleLoanType() { if (window.toggleLoanType) window.toggleLoanType(); }
+        function filterClasses() { if (window.filterClasses) window.filterClasses(); }
+        function acSearch(q, iId, lId) { if (window.acSearch) window.acSearch(q, iId, lId); }
+        function acPick(name, iId, lId) { if (window.acPick) window.acPick(name, iId, lId); }
+        function dbToggleSelect(id) { if (window.dbToggleSelect) window.dbToggleSelect(id); }
+        function dbToggleSelectAll() { if (window.dbToggleSelectAll) window.dbToggleSelectAll(); }
+        function dbDeleteSelected() { if (window.dbDeleteSelected) window.dbDeleteSelected(); }
+    </script>
+
 </body>
 
 </html>
