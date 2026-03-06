@@ -171,6 +171,7 @@ function navigate(page) {
   };
   (renders[page] || (() => { }))();
 }
+window.navigate = navigate;
 
 window.handleAddClick = () => {
   const fns = {
