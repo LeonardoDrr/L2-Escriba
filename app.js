@@ -373,12 +373,12 @@ function dashboard() {
     </div>
     ${alerts ? `<div style="margin-bottom:16px">${alerts}</div>` : ""}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div class="card">
-        <div class="card-title"><i class="ri-trophy-line"></i> ${STATE.isAdmin ? 'Top Miembros por Puntos' : 'Clasificación de Participación'}</div>
+      <div class="card" onclick="navigate('events'); setTimeout(()=>window.showRanking && window.showRanking(), 50)" style="cursor:pointer" title="Ver tabla de puntos">
+        <div class="card-title"><i class="ri-trophy-line"></i> ${STATE.isAdmin ? 'Top Miembros por Puntos' : 'Clasificación de Participación'} <i class="ri-arrow-right-s-line" style="margin-left:auto;opacity:.5"></i></div>
         ${lb}
       </div>
-      <div class="card">
-        <div class="card-title"><i class="ri-history-line"></i> Actividad Reciente</div>
+      <div class="card" onclick="navigate('loans')" style="cursor:pointer" title="Ver actividad">
+        <div class="card-title"><i class="ri-history-line"></i> Actividad Reciente <i class="ri-arrow-right-s-line" style="margin-left:auto;opacity:.5"></i></div>
         ${recentActivity()}
       </div>
     </div>`;
