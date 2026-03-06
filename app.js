@@ -327,8 +327,8 @@ function dashboard() {
   // Leaderboard de puntos
   const lbData = STATE.members.map(m => {
     const pts = STATE.events.reduce((sum, ev) => {
-      // Para no-admin: solo contar eventos de la categoría 'main' (Clan Principal)
-      if (!STATE.isAdmin && (ev.category && ev.category !== "main")) return sum;
+      // Para no-admin: SOLO events de Clan Principal. Farm, Quest y Diarias son PRIVADOS.
+      if (!STATE.isAdmin && (ev.category || "main") !== "main") return sum;
       const p = (ev.participants || []).find(p => p.memberId === m.id);
       return sum + (p ? +p.points : 0);
     }, 0);
