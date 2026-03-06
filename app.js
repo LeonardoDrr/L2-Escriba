@@ -327,6 +327,8 @@ function dashboard() {
   // Leaderboard de puntos
   const lbData = STATE.members.map(m => {
     const pts = STATE.events.reduce((sum, ev) => {
+      // Para no-admin: solo contar eventos de la categoría 'main' (Clan Principal)
+      if (!STATE.isAdmin && (ev.category && ev.category !== "main")) return sum;
       const p = (ev.participants || []).find(p => p.memberId === m.id);
       return sum + (p ? +p.points : 0);
     }, 0);
@@ -372,7 +374,7 @@ function dashboard() {
     ${alerts ? `<div style="margin-bottom:16px">${alerts}</div>` : ""}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div class="card">
-        <div class="card-title"><i class="ri-trophy-line"></i> Top Miembros por Puntos</div>
+        <div class="card-title"><i class="ri-trophy-line"></i> ${STATE.isAdmin ? 'Top Miembros por Puntos' : 'Clasificación de Participación'}</div>
         ${lb}
       </div>
       <div class="card">
@@ -390,12 +392,14 @@ function recentActivity() {
       <span style="color:var(--text3)">${l.itemName || fmt(l.amount) + " Adena"}</span>
     </div>`)
   );
-  STATE.events.slice(-2).reverse().forEach(e =>
+  STATE.events.slice(-2).reverse().forEach(e => {
+    // Para no-admin: ocultar eventos que no sean de Clan Principal
+    if (!STATE.isAdmin && (e.category && e.category !== "main")) return;
     items.push(`<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:.8rem">
       <i class="ri-calendar-event-line" style="color:var(--text3)"></i> Evento: <b>${e.name}</b><br>
       <span style="color:var(--text3)">${(e.participants || []).length} participantes</span>
-    </div>`)
-  );
+    </div>`);
+  });
   return items.length ? items.join("") :
     `<div class="empty-state"><i class="ri-history-line"></i><p>Sin actividad reciente</p></div>`;
 }
