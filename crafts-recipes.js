@@ -1721,25 +1721,31 @@ export function isCraftable(itemName) {
  * @param {string} itemName - The item we are trying to craft/collect
  * @param {number} qtyNeeded - How many of this item is required by the parent
  * @param {Array} whItems - The current unified Warehouse inventory array built outside.
- * @returns {Object} { status: 'ready'|'craftable_base'|'missing_base', missingMaterials: [{name, qty}] }
+ * @returns {Object} { status: 'ready'|'craftable_base'|'missing_base', missingMaterials: [{name, qty}], availableMaterials: [{name, qty}] }
  */
 export function evaluateCraftTree(itemName, qtyNeeded, whItems) {
-    // 1. Check warehouse for direct availability first
     const whEntries = whItems.filter(i => i.name.toLowerCase() === itemName.toLowerCase());
     const whQty = whEntries.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
 
     // If we have exactly what we need, it's 'ready' and no further checking is needed.
     if (whQty >= qtyNeeded) {
-        return { status: 'ready', missingMaterials: [] };
+        return { status: 'ready', missingMaterials: [], availableMaterials: [{ name: itemName, qty: qtyNeeded }] };
     }
 
     const deficit = qtyNeeded - whQty;
+
+    // We physically have whQty of this item, so we track what we are using directly
+    let availableMaterialsToReturn = [];
+    if (whQty > 0) {
+        availableMaterialsToReturn.push({ name: itemName, qty: whQty });
+    }
 
     // 2. If it's a raw uncraftable material (e.g. Animal Bone) and we are short, it's missing.
     if (isNonCraftable(itemName)) {
         return {
             status: 'missing_base',
-            missingMaterials: [{ name: itemName, qty: deficit }]
+            missingMaterials: [{ name: itemName, qty: deficit }],
+            availableMaterials: availableMaterialsToReturn
         };
     }
 
@@ -1750,11 +1756,13 @@ export function evaluateCraftTree(itemName, qtyNeeded, whItems) {
     if (!recipe || recipe.length === 0) {
         return {
             status: 'missing_base',
-            missingMaterials: [{ name: itemName, qty: deficit }]
+            missingMaterials: [{ name: itemName, qty: deficit }],
+            availableMaterials: availableMaterialsToReturn
         };
     }
 
     let allMissing = [];
+    let allAvailable = [...availableMaterialsToReturn];
 
     for (const subMat of recipe) {
         // We need (subMat.needed * deficit) amount of this sub-material to cover the parent deficit
@@ -1762,8 +1770,8 @@ export function evaluateCraftTree(itemName, qtyNeeded, whItems) {
 
         const subEval = evaluateCraftTree(subMat.name, totalSubNeeded, whItems);
 
+        // Aggregate missing materials
         if (subEval.missingMaterials.length > 0) {
-            // Aggregate missing materials
             for (const missing of subEval.missingMaterials) {
                 const existing = allMissing.find(m => m.name === missing.name);
                 if (existing) {
@@ -1773,14 +1781,26 @@ export function evaluateCraftTree(itemName, qtyNeeded, whItems) {
                 }
             }
         }
+
+        // Aggregate available materials used
+        if (subEval.availableMaterials.length > 0) {
+            for (const avail of subEval.availableMaterials) {
+                const existing = allAvailable.find(m => m.name === avail.name);
+                if (existing) {
+                    existing.qty += avail.qty;
+                } else {
+                    allAvailable.push({ name: avail.name, qty: avail.qty });
+                }
+            }
+        }
     }
 
     if (allMissing.length === 0) {
         // We lack the direct item, but we have 100% of the base materials across all sub-trees!
-        return { status: 'craftable_base', missingMaterials: [] };
+        return { status: 'craftable_base', missingMaterials: [], availableMaterials: allAvailable };
     } else {
         // We lack base materials somewhere down the tree.
-        return { status: 'missing_base', missingMaterials: allMissing };
+        return { status: 'missing_base', missingMaterials: allMissing, availableMaterials: allAvailable };
     }
 }
 

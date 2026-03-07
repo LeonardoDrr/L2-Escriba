@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════════
 //  app2.js — Módulos: Almacén, Crafts, Tesorería, Préstamos, Eventos
 // ═══════════════════════════════════════════════════════════
-import { searchItems, CATEGORY_LABELS } from "./items-db.js?v=5";
-import { getRecipeFor, isNonCraftable, evaluateCraftTree } from "./crafts-recipes.js?v=5";
+import { searchItems, CATEGORY_LABELS } from "./items-db.js?v=6";
+import { getRecipeFor, isNonCraftable, evaluateCraftTree } from "./crafts-recipes.js?v=6";
 
 
 // ── WAREHOUSE ────────────────────────────────────────────
@@ -369,9 +369,17 @@ window.crafts = function () {
         if (evalResult.status === 'ready') {
           // Fallback just in case
         } else if (evalResult.status === 'craftable_base') {
+          const baseList = evalResult.availableMaterials.map(mat => {
+            // Find total existing in warehouse for this specific base material to show "Total/Needed"
+            const whEntriesReq = (window.STATE.warehouse || []).filter(i => i.name.toLowerCase() === mat.name.toLowerCase());
+            const whTotalReq = whEntriesReq.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+            return `• ${mat.name} x${whTotalReq} / ${mat.qty}`;
+          }).join("<br>");
+
           evaluationHTML = `
-                <div style="margin-top:8px;font-size:0.7rem;color:var(--gold-light);display:flex;align-items:center;gap:4px">
-                  <i class="ri-hammer-fill"></i> Crafteable con materiales base
+                <div style="margin-top:8px;font-size:0.7rem;color:var(--gold-light);display:flex;flex-direction:column;gap:4px">
+                  <div style="display:flex;align-items:center;gap:4px"><i class="ri-hammer-fill"></i> Crafteable con materiales base:</div>
+                  <div style="padding-left:14px;opacity:0.9;color:var(--text3)">${baseList}</div>
                 </div>
               `;
         } else {
