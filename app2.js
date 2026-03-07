@@ -151,13 +151,15 @@ window.acSearch = (q, inputId, listId) => {
 
   if (!results.length && !window.openNewMatMiniModal) { list.classList.remove("show"); return; }
 
-  let html = results.map(r =>
-    `<div class="ac-item" onclick="acSelect('${inputId}','${listId}',\`${r.name.replace(/`/g, "'")}\`)">
+  let html = results.map(r => {
+    const isRecipe = r.category && r.category.startsWith('recipe');
+    const badge = isRecipe ? ' <i class="ri-magic-line" style="color:var(--gold); font-size:12px; margin-left:4px" title="Receta"></i>' : '';
+    return `<div class="ac-item" onclick="acSelect('${inputId}','${listId}',\`${r.name.replace(/`/g, "'")}\`)">
       <span class="grade-${r.grade || 'NG'}" style="font-size:.7rem">[${r.grade || "NG"}]</span>
-      ${r.name}
+      ${r.name}${badge}
       <span style="color:var(--text3);font-size:.7rem;margin-left:auto">${window.CATEGORY_LABELS ? window.CATEGORY_LABELS[r.category] : r.category}</span>
-    </div>`
-  ).join("");
+    </div>`;
+  }).join("");
 
   // Si window.openNewMatMiniModal existe (cargado desde app3.js), mostramos botón de crear
   if (window.openNewMatMiniModal) {

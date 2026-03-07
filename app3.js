@@ -23,10 +23,10 @@ window.dbmanager = function (isRender = true) {
   }).sort((a, b) => a.name.localeCompare(b.name));
 
   const rows = list.map(i => {
-    const isCraft = i.materials && i.materials.length > 0;
+    const isCraft = (i.materials && i.materials.length > 0) || (i.category && i.category.startsWith('recipe'));
     const catLabel = CATEGORY_LABELS[i.category] || i.category;
     let badge = "";
-    if (isCraft) badge = '<span class="badge badge-gold" title="Crafteable/Recipe"><i class="ri-magic-line"></i></span>';
+    if (isCraft) badge = '<span class="badge badge-gold" title="Crafteable/Recipe/Mat. Crafteable"><i class="ri-magic-line"></i></span>';
     const isChecked = window._dbSelected.includes(i.id) ? 'checked' : '';
 
     return `<tr>
@@ -325,13 +325,15 @@ window.acSearchDB = (q, inputId, listId) => {
   // Buscar en globalItems
   const results = window.STATE.globalItems.filter(item => item.name.toLowerCase().includes(q.toLowerCase())).slice(0, 15);
 
-  let html = results.map(r =>
-    `<div class="ac-item" onclick="acSelectDB('${inputId}','${listId}',\`${r.name.replace(/`/g, "'")}\`)">
+  let html = results.map(r => {
+    const isRecipe = r.category && r.category.startsWith('recipe');
+    const badge = isRecipe ? ' <i class="ri-magic-line" style="color:var(--gold); font-size:12px; margin-left:4px" title="Receta"></i>' : '';
+    return `<div class="ac-item" onclick="acSelectDB('${inputId}','${listId}',\`${r.name.replace(/`/g, "'")}\`)">
       <span class="grade-${r.grade || 'NG'}" style="font-size:.7rem">[${r.grade || "NG"}]</span>
-      ${r.name}
+      ${r.name}${badge}
       <span style="color:var(--text3);font-size:.7rem;margin-left:auto">${window.CATEGORY_LABELS ? window.CATEGORY_LABELS[r.category] : r.category}</span>
-    </div>`
-  ).join("");
+    </div>`;
+  }).join("");
 
   // Botón "Crear nuevo si no existe"
   const safeQ = q.replace(/'/g, "\\'").replace(/"/g, '&quot;');
