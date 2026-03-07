@@ -7,6 +7,83 @@
 export const CRAFT_RECIPES = {
 
     // ──────────────────────────────────────────────────────────
+    //  MATERIALES BÁSICOS
+    // ──────────────────────────────────────────────────────────
+    "Coarse Bone Powder": [
+        { name: "Animal Bone", needed: 10, collected: 0 }
+    ],
+    "Braided Hemp": [
+        { name: "Stem", needed: 5, collected: 0 }
+    ],
+    "Cokes": [
+        { name: "Coal", needed: 3, collected: 0 },
+        { name: "Charcoal", needed: 3, collected: 0 }
+    ],
+    "Steel": [
+        { name: "Varnish", needed: 5, collected: 0 },
+        { name: "Iron Ore", needed: 5, collected: 0 }
+    ],
+    "Leather": [
+        { name: "Animal Skin", needed: 6, collected: 0 }
+    ],
+    "Silver Mold": [
+        { name: "Silver Nugget", needed: 10, collected: 0 },
+        { name: "Braided Hemp", needed: 5, collected: 0 },
+        { name: "Cokes", needed: 5, collected: 0 }
+    ],
+    "Blacksmith's Frame": [
+        { name: "Silver Mold", needed: 1, collected: 0 },
+        { name: "Varnish of Purity", needed: 5, collected: 0 },
+        { name: "Mithril Ore", needed: 10, collected: 0 }
+    ],
+    "High Grade Suede": [
+        { name: "Coarse Bone Powder", needed: 1, collected: 0 },
+        { name: "Suede", needed: 3, collected: 0 }
+    ],
+    "Varnish of Purity": [
+        { name: "Stone of Purity", needed: 1, collected: 0 },
+        { name: "Coarse Bone Powder", needed: 1, collected: 0 },
+        { name: "Varnish", needed: 3, collected: 0 }
+    ],
+    "Synthetic Cokes": [
+        { name: "Oriharukon Ore", needed: 1, collected: 0 },
+        { name: "Cokes", needed: 3, collected: 0 }
+    ],
+    "Artisan's Frame": [
+        { name: "Steel Mold", needed: 1, collected: 0 },
+        { name: "Varnish of Purity", needed: 5, collected: 0 },
+        { name: "Mithril Ore", needed: 10, collected: 0 }
+    ],
+    "Steel Mold": [
+        { name: "Braided Hemp", needed: 5, collected: 0 },
+        { name: "Iron Ore", needed: 5, collected: 0 },
+        { name: "Coal", needed: 5, collected: 0 }
+    ],
+    "Mithril Alloy": [
+        { name: "Mithril Ore", needed: 1, collected: 0 },
+        { name: "Varnish of Purity", needed: 1, collected: 0 },
+        { name: "Steel", needed: 2, collected: 0 }
+    ],
+    "Oriharukon": [
+        { name: "Synthetic Cokes", needed: 1, collected: 0 },
+        { name: "Oriharukon Ore", needed: 1, collected: 0 },
+        { name: "Silver Branch", needed: 4, collected: 0 } // Reborn uses exact L2 specs but we'll adapt Silver Branch or Silver Nugget depending on db
+    ],
+    "Metallic Fiber": [
+        { name: "Silver Nugget", needed: 15, collected: 0 },
+        { name: "Thread", needed: 20, collected: 0 }
+    ],
+    "Metallic Thread": [
+        { name: "Iron Ore", needed: 5, collected: 0 },
+        { name: "Thread", needed: 10, collected: 0 }
+    ],
+    "Enria": [
+        // Rare material, not strictly craftable via standard materials but leaving here if user wants a specific craft or buys it
+    ],
+    "Asofe": [],
+    "Thons": [],
+
+    // ──────────────────────────────────────────────────────────
     //  ARMAS GRADO S
     // ──────────────────────────────────────────────────────────
     "Forgotten Blade": [
@@ -1612,7 +1689,7 @@ Object.assign(CRAFT_RECIPES, {
         { name: "Silver Nugget", needed: 28, collected: 0 },
         { name: "Enria", needed: 2, collected: 0 },
     ],
-});
+};
 
 // Helper: buscar receta por nombre de item (búsqueda exacta o parcial)
 export function getRecipeFor(itemName) {
@@ -1629,7 +1706,73 @@ export function getRecipeFor(itemName) {
 
 // Helper: ¿Tiene receta este item?
 export function isCraftable(itemName) {
-    return !!getRecipeFor(itemName);
+    return !!CRAFT_RECIPES[itemName];
+}
+
+
+
+// ──────────────────────────────────────────────────────────
+// RECURSIVE CRAFT TREE EVALUATOR
+// ──────────────────────────────────────────────────────────
+
+/**
+ * Evaluates recursively if an item can be crafted using the available Warehouse inventory.
+ * 
+ * @param {string} itemName - The item we are trying to craft/collect
+ * @param {number} qtyNeeded - How many of this item is required by the parent
+ * @param {Array} whItems - The current unified Warehouse inventory array built outside.
+ * @returns {Object} { status: 'ready'|'craftable_base'|'missing_base', missingMaterials: [{name, qty}] }
+ */
+export function evaluateCraftTree(itemName, qtyNeeded, whItems) {
+    // 1. Check warehouse for direct availability first
+    const whEntry = whItems.find(i => i.name.toLowerCase() === itemName.toLowerCase());
+    const whQty = whEntry ? Number(whEntry.qty || 0) : 0;
+
+    // If we have exactly what we need, it's 'ready' and no further checking is needed.
+    if (whQty >= qtyNeeded) {
+        return { status: 'ready', missingMaterials: [] };
+    }
+
+    const deficit = qtyNeeded - whQty;
+
+    // 2. If it's a raw uncraftable material (e.g. Animal Bone) and we are short, it's missing.
+    if (isNonCraftable(itemName)) {
+        return {
+            status: 'missing_base',
+            missingMaterials: [{ name: itemName, qty: deficit }]
+        };
+    }
+
+    // 3. It is craftable! We must recursively check its sub-components to see if we can cover the deficit.
+    const recipe = CRAFT_RECIPES[itemName];
+    let allMissing = [];
+
+    for (const subMat of recipe) {
+        // We need (subMat.needed * deficit) amount of this sub-material to cover the parent deficit
+        const totalSubNeeded = subMat.needed * deficit;
+
+        const subEval = evaluateCraftTree(subMat.name, totalSubNeeded, whItems);
+
+        if (subEval.missingMaterials.length > 0) {
+            // Aggregate missing materials
+            for (const missing of subEval.missingMaterials) {
+                const existing = allMissing.find(m => m.name === missing.name);
+                if (existing) {
+                    existing.qty += missing.qty;
+                } else {
+                    allMissing.push({ name: missing.name, qty: missing.qty });
+                }
+            }
+        }
+    }
+
+    if (allMissing.length === 0) {
+        // We lack the direct item, but we have 100% of the base materials across all sub-trees!
+        return { status: 'craftable_base', missingMaterials: [] };
+    } else {
+        // We lack base materials somewhere down the tree.
+        return { status: 'missing_base', missingMaterials: allMissing };
+    }
 }
 
 // Helper: ¿Es exclusivamente drop (no crafteable)?

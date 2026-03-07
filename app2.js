@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════════
 //  app2.js — Módulos: Almacén, Crafts, Tesorería, Préstamos, Eventos
 // ═══════════════════════════════════════════════════════════
-import { searchItems, CATEGORY_LABELS } from "./items-db.js";
-import { getRecipeFor, isNonCraftable, evaluateCraftTree } from "./crafts-recipes.js";
+import { searchItems, CATEGORY_LABELS } from "./items-db.js?v=2";
+import { getRecipeFor, isNonCraftable, evaluateCraftTree } from "./crafts-recipes.js?v=2";
 
 
 // ── WAREHOUSE ────────────────────────────────────────────

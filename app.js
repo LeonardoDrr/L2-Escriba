@@ -783,4 +783,4 @@ window.delMember = async (id) => {
 };
 
 // ── IMPORT ADDITIONAL MODULES ────────────────────────────
-import("./app2.js");
+import("./app2.js?v=2");
