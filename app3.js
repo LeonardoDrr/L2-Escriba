@@ -366,10 +366,20 @@ window.openNewMatMiniModal = (inputId, listId, tempName, callbackFn = 'acSelectD
   const isRecipe = confirm(`¿Quieres registrar "${tempName}" como un Ítem nuevo en Firebase de forma rápida?`);
   if (!isRecipe) return;
 
-  const inputGrade = prompt(`Escribe el Grado para "${tempName}"\n(Opciones: NG, D, C, B, A, S, S80, S84)`, "NG") || "NG";
-  const cat = prompt(`Escribe la categoría para "${tempName}"\n1=Material, 2=Receta, 3=Armadura, 4=Arma`, "1");
+  const inputGrade = prompt(`Escribe el Grado para "${tempName}"\n(Opciones: NG, D, C, B, A, S)`, "NG") || "NG";
+  const cat = prompt(`Escribe la categoría para "${tempName}"\n1=Material, 2=Receta G., 3=Armadura, 4=Arma, 5=Joya, 6=Consumible, 7=Scroll, 8=Especial, 9=Otros`, "1");
 
-  const mapCat = { "1": "material", "2": "recipe", "3": "armor", "4": "weapon" };
+  const mapCat = {
+    "1": "material",
+    "2": "recipe",
+    "3": "armor",
+    "4": "weapon",
+    "5": "jewelry",
+    "6": "consumable",
+    "7": "scroll",
+    "8": "special",
+    "9": "other"
+  };
   const finalCat = mapCat[cat] || "material";
 
   const data = {
