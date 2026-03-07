@@ -209,8 +209,20 @@ window.acSelect = (inputId, listId, name) => {
   if (itemData) {
     const catEl = document.getElementById("f-icat");
     const gradeEl = document.getElementById("f-igrade");
-    if (catEl && itemData.category) catEl.value = itemData.category;
-    if (gradeEl) gradeEl.value = itemData.grade || "";
+
+    if (catEl && itemData.category) {
+      let catVal = itemData.category;
+      // Reverse lookup if the category is saved as a label (e.g., "Consumible" instead of "consumable")
+      if (window.CATEGORY_LABELS) {
+        const key = Object.keys(window.CATEGORY_LABELS).find(k => window.CATEGORY_LABELS[k] === itemData.category);
+        if (key) catVal = key;
+      }
+      catEl.value = catVal;
+    }
+
+    if (gradeEl) {
+      gradeEl.value = itemData.grade || "";
+    }
   }
 };
 
