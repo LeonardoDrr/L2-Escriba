@@ -177,6 +177,23 @@ window.acSearch = (q, inputId, listId) => {
 window.acSelect = (inputId, listId, name) => {
   document.getElementById(inputId).value = name;
   document.getElementById(listId).classList.remove("show");
+
+  // Auto-completar Categoría y Grado si existen los selects (para Almacén)
+  let itemData = null;
+  if (window.STATE && window.STATE.globalItems) {
+    itemData = window.STATE.globalItems.find(i => i.name.toLowerCase() === name.toLowerCase());
+  }
+  if (!itemData && typeof searchItems === "function") {
+    const res = searchItems(name);
+    if (res && res.length) itemData = res.find(i => i.name.toLowerCase() === name.toLowerCase());
+  }
+
+  if (itemData) {
+    const catEl = document.getElementById("f-icat");
+    const gradeEl = document.getElementById("f-igrade");
+    if (catEl && itemData.category) catEl.value = itemData.category;
+    if (gradeEl) gradeEl.value = itemData.grade || "";
+  }
 };
 
 // Autocomplete especial para Crafts — auto-rellena materiales si hay receta
