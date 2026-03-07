@@ -783,11 +783,12 @@ export const CATEGORY_LABELS = {
     armor: "Armadura",
     jewelry: "Joya",
     material: "Material",
-    recipe: "Receta",
+    recipe: "Recetas Genéricas",
     recipe_weapon: "Receta/Arma",
     recipe_armor: "Receta/Armadura",
     recipe_jewelry: "Receta/Joyería",
     consumable: "Consumible",
     scroll: "Scroll",
     special: "Especial",
+    other: "Otros",
 };
