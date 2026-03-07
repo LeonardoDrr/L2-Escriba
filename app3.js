@@ -55,7 +55,10 @@ window.dbmanager = function (isRender = true) {
             <option value="armor">Armaduras</option>
             <option value="jewelry">Joyería</option>
             <option value="material">Materiales</option>
-            <option value="recipe">Recetas</option>
+            <option value="recipe">Recetas Genéricas</option>
+            <option value="recipe_weapon">Receta/Arma</option>
+            <option value="recipe_armor">Receta/Armadura</option>
+            <option value="recipe_jewelry">Receta/Joyería</option>
             <option value="consumable">Consumibles</option>
           </select>
           <select class="filter-sel" id="db-grade" onchange="window.dbmanager(false)">
@@ -194,7 +197,10 @@ window.editGlobalItem = (id) => {
           <option value="armor" ${item.category === 'armor' ? 'selected' : ''}>Armadura</option>
           <option value="jewelry" ${item.category === 'jewelry' ? 'selected' : ''}>Joyería</option>
           <option value="material" ${item.category === 'material' ? 'selected' : ''}>Material Base</option>
-          <option value="recipe" ${item.category === 'recipe' ? 'selected' : ''}>Receta</option>
+          <option value="recipe" ${item.category === 'recipe' ? 'selected' : ''}>Receta Genérica</option>
+          <option value="recipe_weapon" ${item.category === 'recipe_weapon' ? 'selected' : ''}>Receta/Arma</option>
+          <option value="recipe_armor" ${item.category === 'recipe_armor' ? 'selected' : ''}>Receta/Armadura</option>
+          <option value="recipe_jewelry" ${item.category === 'recipe_jewelry' ? 'selected' : ''}>Receta/Joyería</option>
           <option value="consumable" ${item.category === 'consumable' ? 'selected' : ''}>Consumible</option>
         </select>
       </div>
