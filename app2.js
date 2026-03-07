@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════════
 //  app2.js — Módulos: Almacén, Crafts, Tesorería, Préstamos, Eventos
 // ═══════════════════════════════════════════════════════════
-import { searchItems, CATEGORY_LABELS } from "./items-db.js?v=3";
-import { getRecipeFor, isNonCraftable, evaluateCraftTree } from "./crafts-recipes.js?v=3";
+import { searchItems, CATEGORY_LABELS } from "./items-db.js?v=4";
+import { getRecipeFor, isNonCraftable, evaluateCraftTree } from "./crafts-recipes.js?v=4";
 
 
 // ── WAREHOUSE ────────────────────────────────────────────
@@ -432,31 +432,34 @@ window.updateCraftMat = async (craftId, idx, val) => {
  * Recursively deducts items from the warehouse based on the craft tree.
  */
 function deductFromWarehouseTree(itemName, qtyNeeded, whItems, pendingUpdates) {
-  const whEntry = whItems.find(i => i.name.toLowerCase() === itemName.toLowerCase());
-  const whQty = whEntry ? Number(whEntry.qty || 0) : 0;
+  const whEntries = whItems.filter(i => i.name.toLowerCase() === itemName.toLowerCase());
+  const whQty = whEntries.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
 
-  if (whQty >= qtyNeeded) {
-    // We have it directly. Queue deduction.
-    const newQty = whQty - qtyNeeded;
-    whEntry.qty = newQty;
-    pendingUpdates.push({ id: whEntry.id, data: { qty: newQty } });
-    return;
+  // If we have direct materials available (whQty > 0), deduct them first
+  let remainingDirectNeeded = Math.min(whQty, qtyNeeded);
+
+  if (remainingDirectNeeded > 0) {
+    for (const entry of whEntries) {
+      if (remainingDirectNeeded <= 0) break;
+      const availableInEntry = Number(entry.quantity || 0);
+      if (availableInEntry <= 0) continue;
+
+      const deductAmount = Math.min(availableInEntry, remainingDirectNeeded);
+      entry.quantity = availableInEntry - deductAmount;
+      pendingUpdates.push({ id: entry.id, data: { quantity: entry.quantity } });
+      remainingDirectNeeded -= deductAmount;
+    }
   }
 
-  // If we don't have enough directly but we reached here, it means we are in 'craftable_base' mode
-  // and we verified beforehand that base materials DO exist.
+  // If we couldn't fulfill directly, but we reached here, it means we are in 'craftable_base' mode
+  // We must recursively deduct the remaining deficit from base mats
   const deficit = qtyNeeded - whQty;
-
-  // Deduct whatever we DO have directly first (if any)
-  if (whEntry && whQty > 0) {
-    whEntry.qty = 0;
-    pendingUpdates.push({ id: whEntry.id, data: { qty: 0 } });
-  }
-
-  // Then recursively deduct components for the deficit
-  const recipe = getRecipeFor(itemName);
-  for (const subMat of recipe) {
-    deductFromWarehouseTree(subMat.name, subMat.needed * deficit, whItems, pendingUpdates);
+  if (deficit > 0) {
+    const recipe = getRecipeFor(itemName);
+    if (!recipe) throw new Error("Receta no encontrada para " + itemName);
+    for (const subMat of recipe) {
+      deductFromWarehouseTree(subMat.name, subMat.needed * deficit, whItems, pendingUpdates);
+    }
   }
 }
 
@@ -472,12 +475,21 @@ window.autoFillCraft = async (craftId, matIdx, itemName, missingQty, isCraftActi
   try {
     if (!isCraftAction) {
       // 1. DIRECT DEDUCTION
-      const entry = whItems.find(i => i.name.toLowerCase() === itemName.toLowerCase());
-      if (!entry || entry.qty < missingQty) throw new Error("Inventario desincronizado.");
+      const entries = whItems.filter(i => i.name.toLowerCase() === itemName.toLowerCase());
+      const totalAvailable = entries.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+      if (totalAvailable < missingQty) throw new Error("Inventario desincronizado.");
 
-      const newQty = Number(entry.qty) - missingQty;
-      entry.qty = newQty;
-      pendingUpdates.push({ id: entry.id, data: { qty: newQty } });
+      let needed = missingQty;
+      for (const entry of entries) {
+        if (needed <= 0) break;
+        const availableInEntry = Number(entry.quantity || 0);
+        if (availableInEntry <= 0) continue;
+
+        const deductAmount = Math.min(availableInEntry, needed);
+        entry.quantity = availableInEntry - deductAmount;
+        pendingUpdates.push({ id: entry.id, data: { quantity: entry.quantity } });
+        needed -= deductAmount;
+      }
     } else {
       // 2. RECURSIVE CRAFT DEDUCTION
       // Simulate breaking down the item into base materials
@@ -487,7 +499,7 @@ window.autoFillCraft = async (craftId, matIdx, itemName, missingQty, isCraftActi
     // Process all warehouse deductions in Firebase
     window.toast("Actualizando Almacén...", "info");
     for (const update of pendingUpdates) {
-      if (update.data.qty <= 0) {
+      if (update.data.quantity <= 0) {
         await window.delFireDoc(`clans/${window.CLAN_ID}/warehouse`, update.id);
         // Remove from local array
         const idx = window.STATE.warehouse.findIndex(x => x.id === update.id);

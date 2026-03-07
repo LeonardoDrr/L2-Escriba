@@ -1725,8 +1725,8 @@ export function isCraftable(itemName) {
  */
 export function evaluateCraftTree(itemName, qtyNeeded, whItems) {
     // 1. Check warehouse for direct availability first
-    const whEntry = whItems.find(i => i.name.toLowerCase() === itemName.toLowerCase());
-    const whQty = whEntry ? Number(whEntry.qty || 0) : 0;
+    const whEntries = whItems.filter(i => i.name.toLowerCase() === itemName.toLowerCase());
+    const whQty = whEntries.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
 
     // If we have exactly what we need, it's 'ready' and no further checking is needed.
     if (whQty >= qtyNeeded) {
