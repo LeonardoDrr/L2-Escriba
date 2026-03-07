@@ -2,7 +2,7 @@
 //  app2.js — Módulos: Almacén, Crafts, Tesorería, Préstamos, Eventos
 // ═══════════════════════════════════════════════════════════
 import { searchItems, CATEGORY_LABELS } from "./items-db.js";
-import { getRecipeFor, isNonCraftable } from "./crafts-recipes.js";
+import { getRecipeFor, isNonCraftable, evaluateCraftTree } from "./crafts-recipes.js";
 
 
 // ── WAREHOUSE ────────────────────────────────────────────
@@ -343,18 +343,67 @@ window.crafts = function () {
       <div class="progress-bar" style="margin-bottom:6px"><div class="progress-fill" style="width:${pct}%"></div></div>
       <div style="font-size:.72rem;color:var(--text3);margin-bottom:10px">${pct}% — ${collected}/${needed} unidades</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px">
-        ${mats.map((m, idx) => `
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:.78rem">
-            <div>${m.name}</div>
-            <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-              <input type="number" min="0" max="${m.needed}" value="${m.collected}" style="width:55px;padding:2px 5px;font-size:.75rem"
+        ${mats.map((m, idx) => {
+      const missing = (m.needed || 0) - (m.collected || 0);
+      let evaluationHTML = "";
+
+      if (missing > 0 && c.status === "active") {
+        const evalResult = evaluateCraftTree(m.name, missing, window.STATE.warehouse || []);
+
+        if (evalResult.status === 'ready') {
+          // 1. Ready in Warehouse
+          evaluationHTML = `
+                <div style="margin-top:8px;font-size:0.7rem;color:var(--green);display:flex;align-items:center;gap:4px">
+                  <i class="ri-checkbox-circle-fill"></i> Disponible en Almacén
+                </div>
+                <button onclick="autoFillCraft('${c.id}', ${idx}, '${m.name}', ${missing}, false)" 
+                        style="margin-top:6px;width:100%;font-size:0.7rem;padding:4px;background:var(--green);color:#fff;border:none;border-radius:4px;cursor:pointer">
+                  <i class="ri-download-line"></i> Extraer del Almacén
+                </button>
+              `;
+        } else if (evalResult.status === 'craftable_base') {
+          // 2. Craftable from Base
+          evaluationHTML = `
+                <div style="margin-top:8px;font-size:0.7rem;color:var(--gold-light);display:flex;align-items:center;gap:4px">
+                  <i class="ri-hammer-fill"></i> Crafteable desde base
+                </div>
+                <button onclick="autoFillCraft('${c.id}', ${idx}, '${m.name}', ${missing}, true)" 
+                        style="margin-top:6px;width:100%;font-size:0.7rem;padding:4px;background:var(--gold);color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:600">
+                  <i class="ri-hammer-line"></i> Craftear y Llenar
+                </button>
+              `;
+        } else {
+          // 3. Missing Base Materials
+          const missingList = evalResult.missingMaterials.map(mat => `• Falta ${mat.qty}x ${mat.name}`).join("<br>");
+          evaluationHTML = `
+                <div style="margin-top:8px;font-size:0.7rem;color:var(--red);display:flex;flex-direction:column;gap:4px">
+                  <div style="display:flex;align-items:center;gap:4px"><i class="ri-close-circle-fill"></i> Toca Recolectar:</div>
+                  <div style="padding-left:14px;opacity:0.9">${missingList}</div>
+                </div>
+              `;
+        }
+      } else if (missing <= 0) {
+        evaluationHTML = `
+                <div style="margin-top:8px;font-size:0.7rem;color:var(--text3);display:flex;align-items:center;gap:4px">
+                  <i class="ri-check-double-line"></i> Completo
+                </div>
+              `;
+      }
+
+      return `
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:.78rem;display:flex;flex-direction:column">
+            <div style="font-weight:600">${m.name}</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+              <input type="number" min="0" max="${m.needed}" value="${m.collected}" style="width:55px;padding:3px 5px;font-size:.75rem;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--text)"
                 onchange="updateCraftMat('${c.id}',${idx},this.value)">
               <span style="color:var(--text3)">/ ${m.needed}</span>
               <div class="progress-bar" style="flex:1;height:5px">
                 <div class="progress-fill" style="width:${m.needed ? Math.min(100, Math.round(+m.collected / +m.needed * 100)) : 0}%"></div>
               </div>
             </div>
-          </div>`).join("")}
+            ${evaluationHTML}
+          </div>`;
+    }).join("")}
       </div>
       ${c.deadline ? `<div style="font-size:.72rem;color:var(--text3);margin-top:8px">📅 ${c.deadline}</div>` : ""}
     </div>`;
@@ -375,7 +424,95 @@ window.updateCraftMat = async (craftId, idx, val) => {
   c.materials[idx].collected = +val;
   await window.saveFireDoc(`clans/${window.CLAN_ID}/crafts`, craftId, { materials: c.materials });
   window.toast("Actualizado", "success");
+  window.crafts(); // re-render to update dynamic evaluations
 };
+
+// ── SMART CRAFT AUTO-FILL ENGINE ─────────────────
+/**
+ * Recursively deducts items from the warehouse based on the craft tree.
+ */
+function deductFromWarehouseTree(itemName, qtyNeeded, whItems, pendingUpdates) {
+  const whEntry = whItems.find(i => i.name.toLowerCase() === itemName.toLowerCase());
+  const whQty = whEntry ? Number(whEntry.qty || 0) : 0;
+
+  if (whQty >= qtyNeeded) {
+    // We have it directly. Queue deduction.
+    const newQty = whQty - qtyNeeded;
+    whEntry.qty = newQty;
+    pendingUpdates.push({ id: whEntry.id, data: { qty: newQty } });
+    return;
+  }
+
+  // If we don't have enough directly but we reached here, it means we are in 'craftable_base' mode
+  // and we verified beforehand that base materials DO exist.
+  const deficit = qtyNeeded - whQty;
+
+  // Deduct whatever we DO have directly first (if any)
+  if (whEntry && whQty > 0) {
+    whEntry.qty = 0;
+    pendingUpdates.push({ id: whEntry.id, data: { qty: 0 } });
+  }
+
+  // Then recursively deduct components for the deficit
+  const recipe = getRecipeFor(itemName);
+  for (const subMat of recipe) {
+    deductFromWarehouseTree(subMat.name, subMat.needed * deficit, whItems, pendingUpdates);
+  }
+}
+
+window.autoFillCraft = async (craftId, matIdx, itemName, missingQty, isCraftAction) => {
+  if (!confirm(`¿Confirmas extraer materiales del almacén para llenar ${missingQty}x ${itemName}?`)) return;
+
+  const craft = window.STATE.crafts.find(x => x.id === craftId);
+  if (!craft) return;
+
+  const whItems = window.STATE.warehouse;
+  const pendingUpdates = [];
+
+  try {
+    if (!isCraftAction) {
+      // 1. DIRECT DEDUCTION
+      const entry = whItems.find(i => i.name.toLowerCase() === itemName.toLowerCase());
+      if (!entry || entry.qty < missingQty) throw new Error("Inventario desincronizado.");
+
+      const newQty = Number(entry.qty) - missingQty;
+      entry.qty = newQty;
+      pendingUpdates.push({ id: entry.id, data: { qty: newQty } });
+    } else {
+      // 2. RECURSIVE CRAFT DEDUCTION
+      // Simulate breaking down the item into base materials
+      deductFromWarehouseTree(itemName, missingQty, whItems, pendingUpdates);
+    }
+
+    // Process all warehouse deductions in Firebase
+    window.toast("Actualizando Almacén...", "info");
+    for (const update of pendingUpdates) {
+      if (update.data.qty <= 0) {
+        await window.delFireDoc(`clans/${window.CLAN_ID}/warehouse`, update.id);
+        // Remove from local array
+        const idx = window.STATE.warehouse.findIndex(x => x.id === update.id);
+        if (idx > -1) window.STATE.warehouse.splice(idx, 1);
+      } else {
+        await window.saveFireDoc(`clans/${window.CLAN_ID}/warehouse`, update.id, update.data);
+      }
+    }
+
+    // Update the craft material collected amount
+    craft.materials[matIdx].collected += missingQty;
+    await window.saveFireDoc(`clans/${window.CLAN_ID}/crafts`, craftId, { materials: craft.materials });
+
+    window.toast(`Auto-Llenado de ${itemName} completado!`, "success");
+    window.crafts();
+
+  } catch (error) {
+    console.error(error);
+    window.toast(`Error en la transacción: ${error.message}`, "error");
+    // Reload state on failure to prevent desync
+    setTimeout(() => location.reload(), 2000);
+  }
+};
+
+
 
 let matIdx2 = 0;
 function matRow2(m = {}, i = 0) {
