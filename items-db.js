@@ -73,18 +73,6 @@ export const L2_ITEMS = [
     { id: 161, name: "Icarus Disperser", category: "weapon", grade: "S", type: "magic" },
     { id: 162, name: "Angel Slayer", category: "weapon", grade: "S", type: "dagger" },
     { id: 163, name: "Sirra's Blade (S)", category: "weapon", grade: "S", type: "sword" },
-    { id: 164, name: "Vesper Noble Sword", category: "weapon", grade: "S80", type: "sword" },
-    { id: 165, name: "Vesper Retributer", category: "weapon", grade: "S80", type: "blunt" },
-    { id: 166, name: "Vesper Bow", category: "weapon", grade: "S80", type: "bow" },
-    { id: 167, name: "Vesper Shaper", category: "weapon", grade: "S80", type: "dagger" },
-    { id: 168, name: "Vesper Fighter", category: "weapon", grade: "S80", type: "fist" },
-    { id: 169, name: "Vesper Caster", category: "weapon", grade: "S80", type: "magic" },
-    { id: 170, name: "Vesper Singer", category: "weapon", grade: "S80", type: "magic" },
-    { id: 171, name: "Vorpal Sword", category: "weapon", grade: "S84", type: "sword" },
-    { id: 172, name: "Vorpal Blader", category: "weapon", grade: "S84", type: "dagger" },
-    { id: 173, name: "Vorpal Retributer", category: "weapon", grade: "S84", type: "blunt" },
-    { id: 174, name: "Vorpal Bow", category: "weapon", grade: "S84", type: "bow" },
-    { id: 175, name: "Vorpal Caster", category: "weapon", grade: "S84", type: "magic" },
     { id: 176, name: "Dynasty Two-Handed Sword", category: "weapon", grade: "A", type: "two_sword" },
     { id: 177, name: "Haste Axe", category: "weapon", grade: "C", type: "blunt" },
 
@@ -113,9 +101,6 @@ export const L2_ITEMS = [
     { id: 321, name: "Imperial Crusader Shield", category: "armor", grade: "S", type: "shield" },
     { id: 322, name: "Imperial Crusader Gauntlets", category: "armor", grade: "S", type: "gloves" },
     { id: 323, name: "Imperial Crusader Boots", category: "armor", grade: "S", type: "boots" },
-    { id: 324, name: "Vesper Armor", category: "armor", grade: "S80", type: "heavy" },
-    { id: 325, name: "Vesper Shield", category: "armor", grade: "S80", type: "shield" },
-    { id: 326, name: "Vorpal Armor", category: "armor", grade: "S84", type: "heavy" },
 
     // ── ARMADURAS — Ligeras ───────────────────────────────────
     { id: 350, name: "Devotion Armor", category: "armor", grade: "NG", type: "light" },
@@ -137,8 +122,6 @@ export const L2_ITEMS = [
     { id: 366, name: "Draconic Leather Helmet", category: "armor", grade: "S", type: "light" },
     { id: 367, name: "Draconic Leather Gloves", category: "armor", grade: "S", type: "gloves" },
     { id: 368, name: "Draconic Leather Boots", category: "armor", grade: "S", type: "boots" },
-    { id: 369, name: "Vesper Leather Armor", category: "armor", grade: "S80", type: "light" },
-    { id: 370, name: "Vorpal Leather Armor", category: "armor", grade: "S84", type: "light" },
 
     // ── ARMADURAS — Mágicas ───────────────────────────────────
     { id: 400, name: "Robe of Magic", category: "armor", grade: "D", type: "robe" },
@@ -153,8 +136,6 @@ export const L2_ITEMS = [
     { id: 409, name: "Arcana Circlet", category: "armor", grade: "S", type: "robe" },
     { id: 410, name: "Arcana Gloves", category: "armor", grade: "S", type: "gloves" },
     { id: 411, name: "Arcana Boots", category: "armor", grade: "S", type: "boots" },
-    { id: 412, name: "Vesper Robe", category: "armor", grade: "S80", type: "robe" },
-    { id: 413, name: "Vorpal Robe", category: "armor", grade: "S84", type: "robe" },
 
     // ── JOYAS ─────────────────────────────────────────────────
     { id: 500, name: "Necklace of Devotion", category: "jewelry", grade: "NG", type: "necklace" },
@@ -183,15 +164,6 @@ export const L2_ITEMS = [
     { id: 523, name: "Queen Ant's Ring", category: "jewelry", grade: "A", type: "ring" },
     { id: 524, name: "Orfen's Earring", category: "jewelry", grade: "A", type: "earring" },
     { id: 525, name: "Core's Ring", category: "jewelry", grade: "A", type: "ring" },
-    { id: 526, name: "Vesper Necklace", category: "jewelry", grade: "S80", type: "necklace" },
-    { id: 527, name: "Vesper Earrings", category: "jewelry", grade: "S80", type: "earring" },
-    { id: 528, name: "Vesper Ring", category: "jewelry", grade: "S80", type: "ring" },
-    { id: 529, name: "Vorpal Ring", category: "jewelry", grade: "S84", type: "ring" },
-    { id: 530, name: "Vorpal Earrings", category: "jewelry", grade: "S84", type: "earring" },
-    { id: 531, name: "Vorpal Necklace", category: "jewelry", grade: "S84", type: "necklace" },
-    { id: 532, name: "Lindvior's Earring", category: "jewelry", grade: "S84", type: "earring" },
-    { id: 533, name: "Istina's Necklace", category: "jewelry", grade: "S84", type: "necklace" },
-    { id: 534, name: "Octavis' Ring", category: "jewelry", grade: "S84", type: "ring" },
     { id: 535, name: "Sealed Tateossian Ring", category: "jewelry", grade: "S", type: "ring" },
     { id: 536, name: "Sealed Tateossian Earring", category: "jewelry", grade: "S", type: "earring" },
     { id: 537, name: "Sealed Tateossian Necklace", category: "jewelry", grade: "S", type: "necklace" },
@@ -252,7 +224,6 @@ export const L2_ITEMS = [
     { id: 806, name: "Recipe: Draconic Leather", category: "recipe", grade: "S", type: "armor_recipe" },
     { id: 807, name: "Recipe: Arcana Robe", category: "recipe", grade: "S", type: "armor_recipe" },
     { id: 808, name: "Recipe: Majestic Sword", category: "recipe", grade: "A", type: "weapon_recipe" },
-    { id: 809, name: "Recipe: Vesper Sword", category: "recipe", grade: "S80", type: "weapon_recipe" },
     { id: 810, name: "Recipe: Soulshot S", category: "recipe", grade: "S", type: "shot_recipe" },
     { id: 811, name: "Recipe: Blessed Spiritshot S", category: "recipe", grade: "S", type: "shot_recipe" },
     { id: 812, name: "Recipe: Soulshot A", category: "recipe", grade: "A", type: "shot_recipe" },
@@ -382,20 +353,7 @@ export const L2_ITEMS = [
     // Imperial Crusader (S) — piezas adicionales
     { id: 2140, name: "Imperial Crusader Armor (Full)", category: "armor", grade: "S", type: "heavy" },
 
-    // Vesper Heavy (S80) — set completo
-    { id: 2150, name: "Vesper Breastplate", category: "armor", grade: "S80", type: "heavy" },
-    { id: 2151, name: "Vesper Gaiters", category: "armor", grade: "S80", type: "heavy" },
-    { id: 2152, name: "Vesper Helmet", category: "armor", grade: "S80", type: "heavy" },
-    { id: 2153, name: "Vesper Gauntlets", category: "armor", grade: "S80", type: "gloves" },
-    { id: 2154, name: "Vesper Boots", category: "armor", grade: "S80", type: "boots" },
 
-    // Vorpal Heavy (S84) — set completo
-    { id: 2160, name: "Vorpal Breastplate", category: "armor", grade: "S84", type: "heavy" },
-    { id: 2161, name: "Vorpal Gaiters", category: "armor", grade: "S84", type: "heavy" },
-    { id: 2162, name: "Vorpal Helmet", category: "armor", grade: "S84", type: "heavy" },
-    { id: 2163, name: "Vorpal Shield", category: "armor", grade: "S84", type: "shield" },
-    { id: 2164, name: "Vorpal Gauntlets", category: "armor", grade: "S84", type: "gloves" },
-    { id: 2165, name: "Vorpal Boots", category: "armor", grade: "S84", type: "boots" },
 
     // ══ ARMADURAS LIGERAS — Sets completos ══════════════════
 
@@ -415,19 +373,7 @@ export const L2_ITEMS = [
     { id: 2214, name: "Majestic Leather Gloves", category: "armor", grade: "A", type: "gloves" },
     { id: 2215, name: "Majestic Leather Boots", category: "armor", grade: "A", type: "boots" },
 
-    // Vesper Leather (S80)
-    { id: 2220, name: "Vesper Leather Breastplate", category: "armor", grade: "S80", type: "light" },
-    { id: 2221, name: "Vesper Leather Gaiters", category: "armor", grade: "S80", type: "light" },
-    { id: 2222, name: "Vesper Leather Helmet", category: "armor", grade: "S80", type: "light" },
-    { id: 2223, name: "Vesper Leather Gloves", category: "armor", grade: "S80", type: "gloves" },
-    { id: 2224, name: "Vesper Leather Boots", category: "armor", grade: "S80", type: "boots" },
 
-    // Vorpal Leather (S84)
-    { id: 2230, name: "Vorpal Leather Breastplate", category: "armor", grade: "S84", type: "light" },
-    { id: 2231, name: "Vorpal Leather Gaiters", category: "armor", grade: "S84", type: "light" },
-    { id: 2232, name: "Vorpal Leather Helmet", category: "armor", grade: "S84", type: "light" },
-    { id: 2233, name: "Vorpal Leather Gloves", category: "armor", grade: "S84", type: "gloves" },
-    { id: 2234, name: "Vorpal Leather Boots", category: "armor", grade: "S84", type: "boots" },
 
     // ══ ARMADURAS MÁGICAS — Sets completos ══════════════════
 
@@ -459,15 +405,7 @@ export const L2_ITEMS = [
     // Arcana (S) — set completo
     { id: 2340, name: "Arcana Robe Set", category: "armor", grade: "S", type: "robe" },
 
-    // Vesper Robe (S80)
-    { id: 2350, name: "Vesper Circlet", category: "armor", grade: "S80", type: "robe" },
-    { id: 2351, name: "Vesper Gloves", category: "armor", grade: "S80", type: "gloves" },
-    { id: 2352, name: "Vesper Boots", category: "armor", grade: "S80", type: "boots" },
 
-    // Vorpal Robe (S84)
-    { id: 2360, name: "Vorpal Circlet", category: "armor", grade: "S84", type: "robe" },
-    { id: 2361, name: "Vorpal Robe Gloves", category: "armor", grade: "S84", type: "gloves" },
-    { id: 2362, name: "Vorpal Robe Boots", category: "armor", grade: "S84", type: "boots" },
 
     // ══ SETS GRADO C — Completos ════════════════════════════
     { id: 2400, name: "Avadon Armor", category: "armor", grade: "C", type: "heavy" },
@@ -569,19 +507,7 @@ export const L2_ITEMS = [
     { id: 2648, name: "Forgotten Blade (Two-Handed)", category: "weapon", grade: "S", type: "two_sword" },
     { id: 2649, name: "Heaven's Divider (Dual)", category: "weapon", grade: "S", type: "dual" },
 
-    // ══ ARMAS ADICIONALES — Grado S80 ═══════════════════════
-    { id: 2660, name: "Vesper Stormer", category: "weapon", grade: "S80", type: "spear" },
-    { id: 2661, name: "Vesper Avenger", category: "weapon", grade: "S80", type: "two_sword" },
-    { id: 2662, name: "Vesper Master", category: "weapon", grade: "S80", type: "blunt" },
-    { id: 2663, name: "Vesper Dual Sword", category: "weapon", grade: "S80", type: "dual" },
-    { id: 2664, name: "Vesper Dual Cutter", category: "weapon", grade: "S80", type: "dual" },
 
-    // ══ ARMAS ADICIONALES — Grado S84 ═══════════════════════
-    { id: 2680, name: "Vorpal Slasher", category: "weapon", grade: "S84", type: "two_sword" },
-    { id: 2681, name: "Vorpal Splitter", category: "weapon", grade: "S84", type: "blunt" },
-    { id: 2682, name: "Vorpal Spear", category: "weapon", grade: "S84", type: "spear" },
-    { id: 2683, name: "Vorpal Dual Blades", category: "weapon", grade: "S84", type: "dual" },
-    { id: 2684, name: "Vorpal Edge", category: "weapon", grade: "S84", type: "sword" },
 
     // ══ MATERIALES ADICIONALES ══════════════════════════════
     { id: 2700, name: "Sealed Imperial Crusader Belt", category: "material", grade: "S", type: "part" },
@@ -596,14 +522,6 @@ export const L2_ITEMS = [
     { id: 2709, name: "Imperial Crusader Gaiters Part", category: "material", grade: "S", type: "part" },
     { id: 2710, name: "Draconic Leather Armor Part", category: "material", grade: "S", type: "part" },
     { id: 2711, name: "Arcana Robe Part", category: "material", grade: "S", type: "part" },
-    { id: 2712, name: "Vesper Breastplate Part", category: "material", grade: "S80", type: "part" },
-    { id: 2713, name: "Vesper Leather Armor Part", category: "material", grade: "S80", type: "part" },
-    { id: 2714, name: "Vesper Robe Part", category: "material", grade: "S80", type: "part" },
-    { id: 2715, name: "Vesper Sword Piece", category: "material", grade: "S80", type: "part" },
-    { id: 2716, name: "Vorpal Breastplate Part", category: "material", grade: "S84", type: "part" },
-    { id: 2717, name: "Vorpal Leather Armor Part", category: "material", grade: "S84", type: "part" },
-    { id: 2718, name: "Vorpal Robe Part", category: "material", grade: "S84", type: "part" },
-    { id: 2719, name: "Vorpal Sword Piece", category: "material", grade: "S84", type: "part" },
     { id: 2720, name: "Steel", category: "material", grade: "", type: "resource" },
     { id: 2721, name: "Cokes", category: "material", grade: "", type: "resource" },
     { id: 2722, name: "Warsmith's Mold", category: "material", grade: "", type: "resource" },
@@ -615,16 +533,8 @@ export const L2_ITEMS = [
     { id: 2728, name: "Ring of Baium Pattern", category: "material", grade: "S", type: "part" },
     { id: 2729, name: "Earring of Zaken Pattern", category: "material", grade: "S", type: "part" },
     { id: 2730, name: "Major Arcana Piece", category: "material", grade: "S", type: "part" },
-    { id: 2731, name: "Crystal S80", category: "material", grade: "S80", type: "crystal" },
-    { id: 2732, name: "Crystal S84", category: "material", grade: "S84", type: "crystal" },
 
     // ══ SCROLLS ADICIONALES ══════════════════════════════════
-    { id: 2800, name: "Scroll: Enchant Weapon S80", category: "scroll", grade: "S80", type: "enchant" },
-    { id: 2801, name: "Scroll: Enchant Armor S80", category: "scroll", grade: "S80", type: "enchant" },
-    { id: 2802, name: "Scroll: Enchant Weapon S84", category: "scroll", grade: "S84", type: "enchant" },
-    { id: 2803, name: "Scroll: Enchant Armor S84", category: "scroll", grade: "S84", type: "enchant" },
-    { id: 2804, name: "Blessed Scroll: Enchant Weapon S80", category: "scroll", grade: "S80", type: "enchant" },
-    { id: 2805, name: "Blessed Scroll: Enchant Armor S80", category: "scroll", grade: "S84", type: "enchant" },
     { id: 2806, name: "Scroll: Enchant Weapon B", category: "scroll", grade: "B", type: "enchant" },
     { id: 2807, name: "Scroll: Enchant Armor B", category: "scroll", grade: "B", type: "enchant" },
     { id: 2808, name: "Scroll of Ancient Knowledge", category: "scroll", grade: "", type: "skill_book" },
@@ -689,18 +599,8 @@ export const L2_ITEMS = [
     { id: 2984, name: "Dragon Heart", category: "special", grade: "", type: "boss_drop" },
     { id: 2985, name: "Olympiad Bracelet (Hero)", category: "special", grade: "", type: "olympiad" },
     { id: 2986, name: "Icarus Equipment Box", category: "special", grade: "S", type: "event" },
-    { id: 2987, name: "Vesper Equipment Box", category: "special", grade: "S80", type: "event" },
-    { id: 2988, name: "Vorpal Equipment Box", category: "special", grade: "S84", type: "event" },
 
     // ══ RECETAS ADICIONALES ══════════════════════════════════
-    { id: 2850, name: "Recipe: Vesper Armor", category: "recipe", grade: "S80", type: "armor_recipe" },
-    { id: 2851, name: "Recipe: Vesper Leather Armor", category: "recipe", grade: "S80", type: "armor_recipe" },
-    { id: 2852, name: "Recipe: Vesper Robe", category: "recipe", grade: "S80", type: "armor_recipe" },
-    { id: 2853, name: "Recipe: Vorpal Armor", category: "recipe", grade: "S84", type: "armor_recipe" },
-    { id: 2854, name: "Recipe: Vorpal Leather Armor", category: "recipe", grade: "S84", type: "armor_recipe" },
-    { id: 2855, name: "Recipe: Vorpal Robe", category: "recipe", grade: "S84", type: "armor_recipe" },
-    { id: 2856, name: "Recipe: Vorpal Sword", category: "recipe", grade: "S84", type: "weapon_recipe" },
-    { id: 2857, name: "Recipe: Vorpal Bow", category: "recipe", grade: "S84", type: "weapon_recipe" },
     { id: 2858, name: "Recipe: Icarus Hammer", category: "recipe", grade: "S", type: "weapon_recipe" },
     { id: 2859, name: "Recipe: Icarus Spitter", category: "recipe", grade: "S", type: "weapon_recipe" },
     { id: 2860, name: "Recipe: Icarus Trident", category: "recipe", grade: "S", type: "weapon_recipe" },
@@ -730,9 +630,6 @@ export const L2_ITEMS = [
     { id: 3030, name: "Earring of Beleth", category: "jewelry", grade: "S", type: "earring" },
     { id: 3031, name: "Ring of Beleth", category: "jewelry", grade: "S", type: "ring" },
     { id: 3032, name: "Necklace of Beleth", category: "jewelry", grade: "S", type: "necklace" },
-    { id: 3033, name: "Ring of Freya", category: "jewelry", grade: "S84", type: "ring" },
-    { id: 3034, name: "Earring of Freya", category: "jewelry", grade: "S84", type: "earring" },
-    { id: 3035, name: "Necklace of Freya", category: "jewelry", grade: "S84", type: "necklace" },
 
     // ══ ARMADURAS GRADO C — SETS ADICIONALES ═══════════════
     // Set Avadon completo ya existe. Agregamos más C-grade:
@@ -814,12 +711,6 @@ export const L2_ITEMS = [
     { id: 3511, name: "Metallic Fiber", category: "material", grade: "", type: "resource" },
 
     // ══ CONSUMIBLES ADICIONALES ══════════════════════════════
-    { id: 3600, name: "Soulshot S80-Grade", category: "consumable", grade: "S80", type: "shot" },
-    { id: 3601, name: "Spiritshot S80-Grade", category: "consumable", grade: "S80", type: "shot" },
-    { id: 3602, name: "Blessed Spiritshot S80", category: "consumable", grade: "S80", type: "shot" },
-    { id: 3603, name: "Soulshot S84-Grade", category: "consumable", grade: "S84", type: "shot" },
-    { id: 3604, name: "Spiritshot S84-Grade", category: "consumable", grade: "S84", type: "shot" },
-    { id: 3605, name: "Blessed Spiritshot S84", category: "consumable", grade: "S84", type: "shot" },
     { id: 3606, name: "HP Recovery Potion (Large)", category: "consumable", grade: "", type: "potion" },
     { id: 3607, name: "MP Recovery Potion (Large)", category: "consumable", grade: "", type: "potion" },
     { id: 3608, name: "Antidote", category: "consumable", grade: "", type: "potion" },
@@ -883,8 +774,6 @@ export const GRADE_COLORS = {
     "B": "#ffcc00",
     "A": "#ff8844",
     "S": "#ff4444",
-    "S80": "#ff6688",
-    "S84": "#ff22aa",
     "": "#aaaaaa",
 };
 

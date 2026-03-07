@@ -69,8 +69,7 @@ window.dbmanager = function (isRender = true) {
             <option value="B">B</option>
             <option value="A">A</option>
             <option value="S">S</option>
-            <option value="S80">S80</option>
-            <option value="S84">S84</option>
+            <option value="S">S</option>
           </select>
           <span id="db-count" style="margin-left:auto;color:var(--text3);font-size:.8rem">${list.length} registros</span>
           <button id="btn-db-del-sel" class="btn btn-danger btn-sm" style="display:${window._dbSelected.length > 0 ? 'flex' : 'none'};gap:5px;margin-left:10px" onclick="window.dbDeleteSelected()"><i class="ri-delete-bin-fill"></i> Borrar (${window._dbSelected.length})</button>
@@ -213,8 +212,7 @@ window.editGlobalItem = (id) => {
           <option value="B" ${item.grade === 'B' ? 'selected' : ''}>B</option>
           <option value="A" ${item.grade === 'A' ? 'selected' : ''}>A</option>
           <option value="S" ${item.grade === 'S' ? 'selected' : ''}>S</option>
-          <option value="S80" ${item.grade === 'S80' ? 'selected' : ''}>S80</option>
-          <option value="S84" ${item.grade === 'S84' ? 'selected' : ''}>S84</option>
+          <option value="S" ${item.grade === 'S' ? 'selected' : ''}>S</option>
         </select>
       </div>
     </div>
