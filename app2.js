@@ -212,16 +212,30 @@ window.acSelect = (inputId, listId, name) => {
 
     if (catEl && itemData.category) {
       let catVal = itemData.category;
-      // Reverse lookup if the category is saved as a label (e.g., "Consumible" instead of "consumable")
+      // Reverse lookup if the category is saved as a display label instead of key
       if (window.CATEGORY_LABELS) {
         const key = Object.keys(window.CATEGORY_LABELS).find(k => window.CATEGORY_LABELS[k] === itemData.category);
         if (key) catVal = key;
       }
+      // Backward-compat aliases for labels that were renamed between sessions
+      const legacyAliases = {
+        "Receta": "recipe",
+        "Recetas Genéricas": "recipe",
+        "Arma": "weapon",
+        "Armadura": "armor",
+        "Joya": "jewelry",
+        "Material": "material",
+        "Consumible": "consumable",
+        "Especial": "special",
+        "Otros": "other",
+      };
+      if (legacyAliases[catVal]) catVal = legacyAliases[catVal];
       catEl.value = catVal;
     }
 
     if (gradeEl) {
-      gradeEl.value = itemData.grade || "";
+      // Fall back to "NG" if grade is empty/undefined so the select always shows a valid option
+      gradeEl.value = itemData.grade || "NG";
     }
   }
 };
