@@ -110,9 +110,27 @@ window.addWarehouseItem = function () {
       status: document.getElementById("f-istat").value, ownerId: document.getElementById("f-iowner").value,
       notes: document.getElementById("f-inotes").value, addedAt: new Date().toISOString()
     };
-    const id = await window.saveFireDoc(`clans/${window.CLAN_ID}/warehouse`, null, data);
-    window.STATE.warehouse.push({ id, ...data });
-    window.toast("Item agregado", "success"); window.warehouse();
+    const existingItem = window.STATE.warehouse.find(i =>
+      i.name.toLowerCase() === data.name.toLowerCase() &&
+      i.category === data.category &&
+      i.grade === data.grade &&
+      i.status === data.status &&
+      i.ownerId === data.ownerId
+    );
+
+    if (existingItem) {
+      existingItem.quantity += data.quantity;
+      if (data.notes) {
+        existingItem.notes = existingItem.notes ? existingItem.notes + " | " + data.notes : data.notes;
+      }
+      await window.saveFireDoc(`clans/${window.CLAN_ID}/warehouse`, existingItem.id, existingItem);
+      window.toast("Cantidad sumada al ítem existente", "success");
+    } else {
+      const id = await window.saveFireDoc(`clans/${window.CLAN_ID}/warehouse`, null, data);
+      window.STATE.warehouse.push({ id, ...data });
+      window.toast("Item agregado", "success");
+    }
+    window.warehouse();
   });
 };
 window.editWH = (id) => {
