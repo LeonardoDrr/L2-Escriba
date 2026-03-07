@@ -1689,7 +1689,7 @@ Object.assign(CRAFT_RECIPES, {
         { name: "Silver Nugget", needed: 28, collected: 0 },
         { name: "Enria", needed: 2, collected: 0 },
     ],
-};
+});
 
 // Helper: buscar receta por nombre de item (búsqueda exacta o parcial)
 export function getRecipeFor(itemName) {
@@ -1744,7 +1744,16 @@ export function evaluateCraftTree(itemName, qtyNeeded, whItems) {
     }
 
     // 3. It is craftable! We must recursively check its sub-components to see if we can cover the deficit.
-    const recipe = CRAFT_RECIPES[itemName];
+    const recipe = getRecipeFor(itemName);
+
+    // Safety check just in case getRecipeFor returns null (e.g. database item with no materials)
+    if (!recipe || recipe.length === 0) {
+        return {
+            status: 'missing_base',
+            missingMaterials: [{ name: itemName, qty: deficit }]
+        };
+    }
+
     let allMissing = [];
 
     for (const subMat of recipe) {
