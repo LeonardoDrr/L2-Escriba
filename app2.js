@@ -6,8 +6,8 @@ import { getRecipeFor, isNonCraftable } from "./crafts-recipes.js";
 
 
 // ── WAREHOUSE ────────────────────────────────────────────
-const WH_CATS = ["weapon", "armor", "jewelry", "material", "consumable", "recipe", "scroll", "special", "other"];
-const WH_GRADES = ["NG", "D", "C", "B", "A", "S", "S80", "S84"];
+const WH_CATS = ["weapon", "armor", "jewelry", "material", "consumable", "recipe", "recipe_weapon", "recipe_armor", "recipe_jewelry", "scroll", "special", "other"];
+const WH_GRADES = ["NG", "D", "C", "B", "A", "S"];
 const WH_STATUS_MAP = {
   available: "<span class='badge badge-green'>Disponible</span>",
   lent: "<span class='badge badge-gold'>Prestado</span>",
