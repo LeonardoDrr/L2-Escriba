@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════════
 //  app2.js — Módulos: Almacén, Crafts, Tesorería, Préstamos, Eventos
 // ═══════════════════════════════════════════════════════════
-import { searchItems, CATEGORY_LABELS } from "./items-db.js?v=4";
-import { getRecipeFor, isNonCraftable, evaluateCraftTree } from "./crafts-recipes.js?v=4";
+import { searchItems, CATEGORY_LABELS } from "./items-db.js?v=5";
+import { getRecipeFor, isNonCraftable, evaluateCraftTree } from "./crafts-recipes.js?v=5";
 
 
 // ── WAREHOUSE ────────────────────────────────────────────
@@ -328,9 +328,20 @@ window.crafts = function () {
 
   const cards = list.map(c => {
     const mats = c.materials || [];
-    const needed = mats.reduce((s, m) => s + +m.needed, 0);
-    const collected = mats.reduce((s, m) => s + +m.collected, 0);
-    const pct = needed ? Math.min(100, Math.round(collected / needed * 100)) : 0;
+
+    let totalNeeded = 0;
+    let totalCollected = 0;
+
+    // We pre-calculate totals based on real warehouse stocks, bounded to what is needed per material.
+    mats.forEach(m => {
+      const whEntries = (window.STATE.warehouse || []).filter(i => i.name.toLowerCase() === m.name.toLowerCase());
+      const whAmt = whEntries.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+      totalNeeded += Number(m.needed || 0);
+      totalCollected += Math.min(Number(m.needed || 0), whAmt);
+    });
+
+    const pct = totalNeeded ? Math.min(100, Math.round(totalCollected / totalNeeded * 100)) : 0;
+
     return `<div class="card" style="margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
         <div style="flex:1"><b style="color:var(--gold-light)">${c.targetItem}</b>
@@ -341,51 +352,42 @@ window.crafts = function () {
         <button class="btn btn-danger btn-icon btn-sm" onclick="delCraft('${c.id}')"><i class="ri-delete-bin-line"></i></button>
       </div>
       <div class="progress-bar" style="margin-bottom:6px"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <div style="font-size:.72rem;color:var(--text3);margin-bottom:10px">${pct}% — ${collected}/${needed} unidades</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-bottom:10px">${pct}% — ${totalCollected}/${totalNeeded} unidades en Almacén</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px">
         ${mats.map((m, idx) => {
-      const missing = (m.needed || 0) - (m.collected || 0);
+      const whEntries = (window.STATE.warehouse || []).filter(i => i.name.toLowerCase() === m.name.toLowerCase());
+      const totalWHAmt = whEntries.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+      const isComplete = totalWHAmt >= m.needed;
+      const missing = Math.max(0, m.needed - totalWHAmt);
+
       let evaluationHTML = "";
 
       if (missing > 0 && c.status === "active") {
-        const evalResult = evaluateCraftTree(m.name, missing, window.STATE.warehouse || []);
+        // Evaluate based on FULL needed amount to properly calculate deficits across the entire item
+        const evalResult = evaluateCraftTree(m.name, m.needed, window.STATE.warehouse || []);
 
         if (evalResult.status === 'ready') {
-          // 1. Ready in Warehouse
-          evaluationHTML = `
-                <div style="margin-top:8px;font-size:0.7rem;color:var(--green);display:flex;align-items:center;gap:4px">
-                  <i class="ri-checkbox-circle-fill"></i> Disponible en Almacén
-                </div>
-                <button onclick="autoFillCraft('${c.id}', ${idx}, '${m.name}', ${missing}, false)" 
-                        style="margin-top:6px;width:100%;font-size:0.7rem;padding:4px;background:var(--green);color:#fff;border:none;border-radius:4px;cursor:pointer">
-                  <i class="ri-download-line"></i> Extraer del Almacén
-                </button>
-              `;
+          // Fallback just in case
         } else if (evalResult.status === 'craftable_base') {
-          // 2. Craftable from Base
           evaluationHTML = `
                 <div style="margin-top:8px;font-size:0.7rem;color:var(--gold-light);display:flex;align-items:center;gap:4px">
-                  <i class="ri-hammer-fill"></i> Crafteable desde base
+                  <i class="ri-hammer-fill"></i> Crafteable con materiales base
                 </div>
-                <button onclick="autoFillCraft('${c.id}', ${idx}, '${m.name}', ${missing}, true)" 
-                        style="margin-top:6px;width:100%;font-size:0.7rem;padding:4px;background:var(--gold);color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:600">
-                  <i class="ri-hammer-line"></i> Craftear y Llenar
-                </button>
               `;
         } else {
-          // 3. Missing Base Materials
+          // Missing Base Materials
           const missingList = evalResult.missingMaterials.map(mat => `• Falta ${mat.qty}x ${mat.name}`).join("<br>");
           evaluationHTML = `
                 <div style="margin-top:8px;font-size:0.7rem;color:var(--red);display:flex;flex-direction:column;gap:4px">
-                  <div style="display:flex;align-items:center;gap:4px"><i class="ri-close-circle-fill"></i> Toca Recolectar:</div>
+                  <div style="display:flex;align-items:center;gap:4px"><i class="ri-error-warning-line"></i> Faltan Materiales Base:</div>
                   <div style="padding-left:14px;opacity:0.9">${missingList}</div>
                 </div>
               `;
         }
-      } else if (missing <= 0) {
+      } else if (isComplete) {
         evaluationHTML = `
-                <div style="margin-top:8px;font-size:0.7rem;color:var(--text3);display:flex;align-items:center;gap:4px">
-                  <i class="ri-check-double-line"></i> Completo
+                <div style="margin-top:8px;font-size:0.7rem;color:var(--green);display:flex;align-items:center;gap:4px">
+                  <i class="ri-checkbox-circle-fill"></i> Listo en Almacén
                 </div>
               `;
       }
@@ -394,11 +396,10 @@ window.crafts = function () {
           <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:.78rem;display:flex;flex-direction:column">
             <div style="font-weight:600">${m.name}</div>
             <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
-              <input type="number" min="0" max="${m.needed}" value="${m.collected}" style="width:55px;padding:3px 5px;font-size:.75rem;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--text)"
-                onchange="updateCraftMat('${c.id}',${idx},this.value)">
+              <div style="font-size:.85rem; font-weight:bold; color: ${isComplete ? 'var(--green)' : 'var(--text)'};">${totalWHAmt}</div>
               <span style="color:var(--text3)">/ ${m.needed}</span>
               <div class="progress-bar" style="flex:1;height:5px">
-                <div class="progress-fill" style="width:${m.needed ? Math.min(100, Math.round(+m.collected / +m.needed * 100)) : 0}%"></div>
+                <div class="progress-fill" style="width:${m.needed ? Math.min(100, Math.round(totalWHAmt / m.needed * 100)) : 0}%; background: ${isComplete ? 'var(--green)' : 'var(--primary)'}"></div>
               </div>
             </div>
             ${evaluationHTML}
