@@ -905,32 +905,28 @@
             </div>
         </div>
         <nav>
-            <a href="#" class="nav-btn active" onclick="activateNav(this); window.navigate('dashboard')"><i
-                    class="ri-dashboard-line"></i> Dashboard</a>
-            <a href="#" class="nav-btn" onclick="activateNav(this); window.navigate('clans')"><i
-                    class="ri-sword-line"></i> Clanes</a>
-            <a href="#" class="nav-btn" onclick="activateNav(this); window.navigate('members')"><i
-                    class="ri-group-line"></i> Miembros</a>
-            <a href="#" class="nav-btn" onclick="activateNav(this); window.navigate('warehouse')"><i
-                    class="ri-archive-2-line"></i> Almacén</a>
-            <a href="#" class="nav-btn" onclick="activateNav(this); window.navigate('loans')"><i
-                    class="ri-hand-coin-line"></i> Préstamos</a>
-            <a href="#" class="nav-btn" onclick="activateNav(this); window.navigate('treasury')"><i
-                    class="ri-coins-line"></i> Tesorería</a>
-            <a href="#" class="nav-btn" onclick="activateNav(this); window.navigate('crafts')"><i
-                    class="ri-hammer-line"></i> Crafteos Locales</a>
+            <div class="nav-section">General</div>
+            <div class="nav-item active" data-page="dashboard"><i class="ri-dashboard-3-line"></i>Dashboard</div>
+            <div class="nav-section">Gestión</div>
+            <div class="nav-item" data-page="members"><i class="ri-group-line"></i>Miembros</div>
+            <div class="nav-item" data-page="warehouse"><i class="ri-archive-2-line"></i>Almacén</div>
+            <div class="nav-item" data-page="crafts"><i class="ri-hammer-line"></i>Crafts</div>
+            <div class="nav-section">Finanzas</div>
+            <div class="nav-item" data-page="treasury"><i class="ri-coin-line"></i>Tesorería</div>
+            <div class="nav-item" data-page="loans"><i class="ri-hand-coin-line"></i>Préstamos <span class="nav-badge"
+                    id="loans-badge" style="display:none">0</span></div>
+            <div class="nav-section">Clan</div>
+            <div class="nav-item" data-page="events"><i class="ri-sword-line"></i>Eventos</div>
+            <div class="nav-section admin-section" style="margin-top:auto"><i class="ri-server-line"
+                    style="font-size:.7rem;margin-right:4px"></i>Base de Datos</div>
+            <div class="nav-item admin-item" data-page="dbmanager" style="color:var(--text3)"><i
+                    class="ri-database-2-line"></i>Gestor L2 DB</div>
 
             <div
-                style="margin-top:20px;margin-bottom:8px;font-size:.65rem;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:1px">
-                SISTEMA</div>
-            <a href="#" class="nav-btn" onclick="activateNav(this); window.navigate('events')"><i
-                    class="ri-calendar-event-line"></i> Eventos G.</a>
-            <a href="#" class="nav-btn user-btn" onclick="activateNav(this); window.dbmanager()"><i
-                    class="ri-database-2-line"></i> Gestor L2 DB</a>
-
-            <div style="margin-top:25px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
-                <div style="font-size:.65rem;color:var(--text3);margin-bottom:8px;letter-spacing:1px">IDIOMA / LANGUAGE
-                </div>
+                style="margin-top:25px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px; padding-left:14px; padding-right:14px;">
+                <div
+                    style="font-size:.65rem;color:var(--text3);margin-bottom:8px;letter-spacing:1px;font-family:'Cinzel',serif">
+                    IDIOMA / LANGUAGE</div>
                 <div id="google_translate_element"></div>
             </div>
         </nav>
@@ -1047,6 +1043,7 @@
     </script>
     <script type="text/javascript"
         src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
 </body>
 
 </html>
