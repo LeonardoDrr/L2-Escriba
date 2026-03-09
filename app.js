@@ -27,6 +27,7 @@ let STATE = {
   crafts: [],
   treasury: [],
   loans: [],
+  equipment: [],
   events: [],
   globalItems: [],
   isAdmin: localStorage.getItem("adminAuth") === "true"
@@ -67,6 +68,12 @@ async function loadAll() {
       STATE.loans = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       updateLoansBadge();
       if (STATE.page === "loans") window.loans();
+    });
+
+    // 🎨 ESCUCHA EN VIVO: Equipamiento
+    onSnapshot(collection(db, `clans/${CLAN_ID}/equipment`), (snap) => {
+      STATE.equipment = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (STATE.page === "equipment") window.equipment();
     });
 
     const [w, c, t, e, gi] = await Promise.all([
@@ -113,12 +120,12 @@ window.members = members;   // ← exponer al scope global para que funcione onc
 // ── NAV ──────────────────────────────────────────────────
 const PAGE_TITLES = {
   dashboard: "Dashboard", members: "Miembros del Clan", warehouse: "Almacén del Clan",
-  crafts: "Crafts & Materiales", treasury: "Tesorería", loans: "Préstamos & Deudas", events: "Eventos",
+  crafts: "Crafts & Materiales", treasury: "Tesorería", loans: "Préstamos & Deudas", equipment: "Equipamiento de Miembros", events: "Eventos",
   dbmanager: "Gestor L2 DB Master"
 };
 const ADD_LABELS = {
   dashboard: "", members: "Nuevo Miembro", warehouse: "Nuevo Item", crafts: "Nuevo Craft",
-  treasury: "Nueva Transacción", loans: "Nuevo Préstamo", events: "Nuevo Evento",
+  treasury: "Nueva Transacción", loans: "Nuevo Préstamo", equipment: "Añadir Equipamiento", events: "Nuevo Evento",
   dbmanager: "Nuevo Item L2"
 };
 
@@ -166,6 +173,7 @@ function navigate(page) {
     crafts: window.crafts,
     treasury: window.treasury,
     loans: window.loans,
+    equipment: window.equipment,
     events: window.events,
     dbmanager: window.dbmanager
   };
@@ -180,6 +188,7 @@ window.handleAddClick = () => {
     crafts: window.addCraft,
     treasury: window.addTransaction,
     loans: window.addLoan,
+    equipment: window.addEquipment,
     events: window.addEvent,
     dbmanager: window.addGlobalItem
   };
@@ -370,6 +379,10 @@ function dashboard() {
       <div class="stat-card" onclick="window.navigate('events')" style="cursor:pointer">
         <div class="stat-icon"><i class="ri-calendar-event-line"></i></div><div class="stat-label">Eventos</div>
         <div class="stat-value">${totalEvents}</div>
+      </div>
+      <div class="stat-card" onclick="window.navigate('equipment')" style="cursor:pointer; display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:80px">
+        <div class="stat-icon" style="margin-bottom:8px"><i class="ri-shield-user-line" style="font-size:2rem"></i></div>
+        <div class="stat-label" style="font-size:1.1rem; font-weight:600; text-align:center">Equipamiento</div>
       </div>
     </div>
     ${alerts ? `<div style="margin-bottom:16px">${alerts}</div>` : ""}
@@ -756,9 +769,8 @@ function addMember() {
   if (!window.STATE.isAdmin) return toast("Sin usuario solo puedes visualizar", "error");
   openModal("<i class='ri-user-add-line'></i> Nuevo Miembro", memberFormHTML(), async () => {
     const data = gatherMemberData(); if (!data) return false;
-    const id = await saveDoc(`clans/${CLAN_ID}/members`, null, data);
-    STATE.members.push({ id, ...data });
-    toast("Miembro agregado", "success"); members();
+    await saveDoc(`clans/${CLAN_ID}/members`, null, data);
+    toast("Miembro agregado", "success");
   });
 }
 
@@ -769,8 +781,7 @@ window.editMember = (id) => {
   openModal("<i class='ri-edit-2-line'></i> Editar Miembro", memberFormHTML(m), async () => {
     const data = gatherMemberData(); if (!data) return false;
     await saveDoc(`clans/${CLAN_ID}/members`, id, data);
-    Object.assign(m, data);
-    toast("Miembro actualizado", "success"); members();
+    toast("Miembro actualizado", "success");
   });
 };
 
@@ -778,8 +789,7 @@ window.delMember = async (id) => {
   if (!window.STATE.isAdmin) return toast("Sin usuario solo puedes visualizar", "error");
   if (!confirm("¿Eliminar este miembro?")) return;
   await delDoc(`clans/${CLAN_ID}/members`, id);
-  STATE.members = STATE.members.filter(m => m.id !== id);
-  toast("Miembro eliminado", "info"); members();
+  toast("Miembro eliminado", "info");
 };
 
 // ── IMPORT ADDITIONAL MODULES ────────────────────────────

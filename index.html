@@ -915,6 +915,7 @@
             <div class="nav-item" data-page="treasury"><i class="ri-coin-line"></i>Tesorería</div>
             <div class="nav-item" data-page="loans"><i class="ri-hand-coin-line"></i>Préstamos <span class="nav-badge"
                     id="loans-badge" style="display:none">0</span></div>
+            <div class="nav-item" data-page="equipment"><i class="ri-shield-user-line"></i>Equipamiento</div>
             <div class="nav-section">Clan</div>
             <div class="nav-item" data-page="events"><i class="ri-sword-line"></i>Eventos</div>
             <div class="nav-section admin-section" style="margin-top:auto"><i class="ri-server-line"
@@ -997,6 +998,7 @@
         function showEvents() { if (window.showEvents) window.showEvents(); }
         function events() { if (window.events) window.events(); }
         function loans() { if (window.loans) window.loans(); }
+        function equipment() { if (window.equipment) window.equipment(); }
         function treasury() { if (window.treasury) window.treasury(); }
         function warehouse() { if (window.warehouse) window.warehouse(); }
         function crafts() { if (window.crafts) window.crafts(); }
@@ -1009,6 +1011,8 @@
         function delLoan(id) { if (window.delLoan) window.delLoan(id); }
         function returnLoan(id) { if (window.returnLoan) window.returnLoan(id); }
         function payInstallment(id) { if (window.payInstallment) window.payInstallment(id); }
+        function editEquipment(id) { if (window.editEquipment) window.editEquipment(id); }
+        function delEquipment(id) { if (window.delEquipment) window.delEquipment(id); }
         function editEvent(id) { if (window.editEvent) window.editEvent(id); }
         function delEvent(id) { if (window.delEvent) window.delEvent(id); }
         function addLoanItemRow() { if (window.addLoanItemRow) window.addLoanItemRow(); }

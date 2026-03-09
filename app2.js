@@ -238,6 +238,14 @@ window.acSelect = (inputId, listId, name) => {
       gradeEl.value = itemData.grade || "NG";
     }
   }
+
+  // Si es un préstamo, actualizamos el array de items de préstamo para que guarde la palabra completa
+  if (inputId.startsWith('ln-it-')) {
+    const idx = parseInt(inputId.replace('ln-it-', ''));
+    if (!isNaN(idx) && window.updLoanItemName) {
+      window.updLoanItemName(idx, name);
+    }
+  }
 };
 
 // Autocomplete especial para Crafts — auto-rellena materiales si hay receta
@@ -934,10 +942,8 @@ window.addLoan = function () {
         items: ltypeOrigin !== "adena" ? finalItems : []
       };
 
-      const id = await window.saveFireDoc(`clans/${window.CLAN_ID}/loans`, null, data);
-      window.STATE.loans.push({ id, ...data });
-      window.updateLoansBadge();
-      window.toast("Préstamo registrado", "success"); window.loans();
+      await window.saveFireDoc(`clans/${window.CLAN_ID}/loans`, null, data);
+      window.toast("Préstamo registrado", "success");
     }
   );
   setTimeout(renderLoanItemRows, 50);
@@ -1015,8 +1021,7 @@ window.editLoan = (id) => {
       };
 
       await window.saveFireDoc(`clans/${window.CLAN_ID}/loans`, id, updateData);
-      Object.assign(l, updateData);
-      window.toast("Préstamo actualizado", "success"); window.loans();
+      window.toast("Préstamo actualizado", "success");
     }
   );
   setTimeout(renderLoanItemRows, 50);
@@ -1093,9 +1098,6 @@ window.payInstallment = async (id) => {
   }
 
   await window.saveFireDoc(`clans/${window.CLAN_ID}/loans`, id, { paidAmount: nwPaid, status: newStatus });
-  l.paidAmount = nwPaid;
-  l.status = newStatus;
-  window.updateLoansBadge(); window.loans();
 };
 window.returnLoan = async (id) => {
   if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
@@ -1132,18 +1134,14 @@ window.returnLoan = async (id) => {
 
   window.openModal("<i class='ri-check-double-line'></i> Verificar Devolución", body, async () => {
     await window.saveFireDoc(`clans/${window.CLAN_ID}/loans`, id, { status: "returned" });
-    l.status = "returned";
-    window.updateLoansBadge();
     window.toast("Préstamo devuelto y verificado", "success");
-    window.loans();
   }, "Confirmar Devolución");
 };
 window.delLoan = async (id) => {
   if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
   if (!confirm("¿Eliminar?")) return;
   await window.delFireDoc(`clans/${window.CLAN_ID}/loans`, id);
-  window.STATE.loans = window.STATE.loans.filter(x => x.id !== id);
-  window.updateLoansBadge(); window.toast("Eliminado", "info"); window.loans();
+  window.toast("Eliminado", "info");
 };
 
 // Estado de la vista de eventos (alterna entre 'events' y 'ranking')
@@ -1438,4 +1436,146 @@ window.delEvent = async (id) => {
     window.toast("Error al eliminar evento", "error");
     console.error(err);
   }
+};
+
+// ── EQUIPMENT ───────────────────────────────────────────
+window.equipment = function () {
+  const q = (document.getElementById("eq-q")?.value || "").toLowerCase();
+  const fs = document.getElementById("eq-status")?.value || "";
+  const fm = document.getElementById("eq-member")?.value || "";
+
+  const list = window.STATE.equipment.filter(e => {
+    const matchesQuery = !q ||
+      window.memberName(e.memberId).toLowerCase().includes(q) ||
+      (e.itemName && e.itemName.toLowerCase().includes(q));
+
+    if (!matchesQuery) return false;
+    if (fs && e.status !== fs) return false;
+    if (fm && e.memberId !== fm) return false;
+    return true;
+  });
+
+  const stBadge = s => ({
+    propio: "<span class='badge badge-green'>Propio</span>",
+    prestamo: "<span class='badge badge-blue'>Préstamo</span>",
+  }[s] || s);
+
+  const rows = list.map(e => `
+    <tr>
+      <td><b>${window.memberName(e.memberId)}</b></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:0.85rem;color:var(--gold-light);background:var(--bg3);padding:3px 8px;border-radius:5px;border:1px solid var(--border);">
+            <b>${e.itemName}</b>
+          </span>
+        </div>
+      </td>
+      <td>${stBadge(e.status)}</td>
+      <td>${window.fmtDate(e.date)}</td>
+      <td style="font-size:0.8rem;color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${e.notes || ''}">${e.notes || '-'}</td>
+      <td style="display:flex;gap:4px">
+        ${window.STATE.isAdmin ? `
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="editEquipment('${e.id}')" title="Editar"><i class="ri-edit-line"></i></button>
+        <button class="btn btn-danger btn-icon btn-sm" onclick="delEquipment('${e.id}')" title="Eliminar"><i class="ri-delete-bin-line"></i></button>
+        ` : ''}
+      </td>
+    </tr>
+  `).join("") || `<tr><td colspan="6"><div class="empty-state"><i class="ri-shield-user-line"></i><p>No hay equipamiento registrado</p></div></td></tr>`;
+
+  document.getElementById("content").innerHTML = `
+    <div class="filters">
+      <select class="filter-sel" id="eq-member" onchange="equipment()">
+        <option value="" ${fm === "" ? "selected" : ""}>Todos los Miembros</option>
+        ${window.STATE.members.map(m => `<option value="${m.id}" ${fm === m.id ? "selected" : ""}>${m.nickname}</option>`).join("")}
+      </select>
+      <select class="filter-sel" id="eq-status" onchange="equipment()">
+        <option value="" ${fs === "" ? "selected" : ""}>Todos los Estados</option>
+        <option value="propio" ${fs === "propio" ? "selected" : ""}>Propio</option>
+        <option value="prestamo" ${fs === "prestamo" ? "selected" : ""}>Préstamo</option>
+      </select>
+      <input class="search-input" id="eq-q" placeholder="🔍 Buscar item..." oninput="equipment()" value="${q}">
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Miembro</th><th>Item</th><th>Estado</th><th>Fecha</th><th>Notas</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+};
+
+function equipmentFormHTML(e = {}) {
+  const mId = e.memberId || "";
+  const iName = e.itemName || "";
+  const st = e.status || "propio";
+  const dt = e.date || new Date().toISOString().split("T")[0];
+  const nt = e.notes || "";
+
+  return `
+    <div class="form-grid">
+      <div class="form-row"><label>Miembro</label>
+        <select id="f-eq-member">
+          <option value="">Seleccionar...</option>
+          ${window.STATE.members.map(m => `<option value="${m.id}" ${m.id === mId ? "selected" : ""}>${m.nickname}</option>`).join("")}
+        </select>
+      </div>
+      <div class="form-row"><label>Estado</label>
+        <select id="f-eq-status">
+          <option value="propio" ${st === "propio" ? "selected" : ""}>Propio</option>
+          <option value="prestamo" ${st === "prestamo" ? "selected" : ""}>Préstamo</option>
+        </select>
+      </div>
+      <div class="form-row col2"><label>Item Equipado</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="f-eq-item" value="${iName}" placeholder="Buscar item L2..." autocomplete="off" oninput="acSearch(this.value, 'f-eq-item', 'ac-eq-item')">
+          <div class="autocomplete-list" id="ac-eq-item"></div>
+        </div>
+      </div>
+      <div class="form-row col2"><label>Fecha de Registro</label>
+        <input type="date" id="f-eq-date" value="${dt}">
+      </div>
+      <div class="form-row col2"><label>Notas / Condiciones</label>
+        <textarea id="f-eq-notes" rows="2" placeholder="Opcional...">${nt}</textarea>
+      </div>
+    </div>
+  `;
+}
+
+function gatherEquipmentData() {
+  const memberId = document.getElementById("f-eq-member").value;
+  const status = document.getElementById("f-eq-status").value;
+  // Make sure not to crash via uninitialized DOM
+  const itemEl = document.getElementById("f-eq-item");
+  const itemName = itemEl ? itemEl.value.trim() : "";
+  const date = document.getElementById("f-eq-date").value;
+  const notes = document.getElementById("f-eq-notes").value.trim();
+
+  if (!memberId) { window.toast("Selecciona un miembro", "error"); return null; }
+  if (!itemName) { window.toast("Escribe el nombre del item", "error"); return null; }
+
+  return { memberId, status, itemName, date, notes };
+}
+
+window.addEquipment = function () {
+  if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
+  if (!window.STATE.members.length) { window.toast("Agrega miembros primero", "error"); return; }
+  window.openModal("<i class='ri-shield-user-line'></i> Otorgar Equipamiento", equipmentFormHTML(), async () => {
+    const data = gatherEquipmentData(); if (!data) return false;
+    await window.saveFireDoc(`clans/${window.CLAN_ID}/equipment`, null, data);
+    window.toast("Equipamiento registrado", "success");
+  });
+};
+
+window.editEquipment = function (id) {
+  if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
+  const e = window.STATE.equipment.find(x => x.id === id); if (!e) return;
+  window.openModal(`<i class='ri-edit-2-line'></i> Editar Equipamiento`, equipmentFormHTML(e), async () => {
+    const data = gatherEquipmentData(); if (!data) return false;
+    await window.saveFireDoc(`clans/${window.CLAN_ID}/equipment`, id, data);
+    window.toast("Equipamiento actualizado", "success");
+  });
+};
+
+window.delEquipment = async function (id) {
+  if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
+  if (!confirm("¿Eliminar este registro de equipamiento?")) return;
+  await window.delFireDoc(`clans/${window.CLAN_ID}/equipment`, id);
+  window.toast("Eliminado", "info");
 };
