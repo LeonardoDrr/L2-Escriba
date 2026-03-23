@@ -1153,7 +1153,7 @@ window.events = function () {
   // ── Calcular puntos separados por categoría para cada miembro ──
   const pointsMap = {};
   window.STATE.members.forEach(m => {
-    pointsMap[m.id] = { id: m.id, name: m.nickname, ant: 0, zaken: 0, frintezza: 0, baium: 0, orfen: 0, core: 0, asedio: 0, antharas: 0, total: 0 };
+    pointsMap[m.id] = { id: m.id, name: m.nickname, ant: 0, zaken: 0, frintezza: 0, baium: 0, orfen: 0, core: 0, asedio: 0, antharas: 0, valakas: 0, total: 0 };
   });
 
   window.STATE.events.forEach(ev => {
@@ -1171,7 +1171,7 @@ window.events = function () {
   const allMembers = Object.values(pointsMap).sort((a, b) => b.total - a.total);
 
   // Totales globales por boss
-  const globalTotals = { ant: 0, zaken: 0, frintezza: 0, baium: 0, orfen: 0, core: 0, asedio: 0, antharas: 0, total: 0 };
+  const globalTotals = { ant: 0, zaken: 0, frintezza: 0, baium: 0, orfen: 0, core: 0, asedio: 0, antharas: 0, valakas: 0, total: 0 };
   allMembers.forEach(m => {
     globalTotals.ant += m.ant;
     globalTotals.zaken += m.zaken;
@@ -1181,6 +1181,7 @@ window.events = function () {
     globalTotals.core += m.core;
     globalTotals.asedio += m.asedio;
     globalTotals.antharas += m.antharas;
+    globalTotals.valakas += m.valakas;
     globalTotals.total += m.total;
   });
 
@@ -1193,6 +1194,7 @@ window.events = function () {
     core:      "<span class='badge badge-blue'    style='margin-right:8px'><i class='ri-skull-line'></i> Core</span>",
     asedio:    "<span class='badge badge-gold'    style='margin-right:8px'><i class='ri-flag-fill'></i> Asedio</span>",
     antharas:  "<span class='badge badge-green'   style='margin-right:8px'><i class='ri-skull-2-line'></i> Antharas</span>",
+    valakas:   "<span class='badge badge-red'     style='margin-right:8px'><i class='ri-fire-fill'></i> Valakas</span>",
     // retrocompatibilidad
     main:      "<span class='badge badge-purple'  style='margin-right:8px'><i class='ri-sword-fill'></i> Clan Principal</span>",
     farm:      "<span class='badge badge-green'   style='margin-right:8px'><i class='ri-hammer-line'></i> Materiales</span>",
@@ -1211,6 +1213,7 @@ window.events = function () {
       { key: 'core',      label: 'Core' },
       { key: 'asedio',    label: 'Asedio' },
       { key: 'antharas',  label: 'Antharas' },
+      { key: 'valakas',   label: 'Valakas' },
     ];
     let adminHeaders = BOSS_COLS.map(b => `<th style="text-align:center">${b.label}</th>`).join("");
     let adminFooters = BOSS_COLS.map(b => `<td style="text-align:center;font-weight:bold">${window.fmt(globalTotals[b.key])}</td>`).join("");
@@ -1296,7 +1299,7 @@ window.events = function () {
         return `<td style="text-align:center; font-weight:600; color:var(--gold-light); font-size:0.75rem;">${window.fmt(p.points)}${annoStr}</td>`;
       }).join("");
 
-      const BOSS_NAMES = { ant:"Q. Ant", zaken:"Zaken", frintezza:"Frintezza", baium:"Baium", orfen:"Orfen", core:"Core", asedio:"Asedio", antharas:"Antharas" };
+      const BOSS_NAMES = { ant:"Q. Ant", zaken:"Zaken", frintezza:"Frintezza", baium:"Baium", orfen:"Orfen", core:"Core", asedio:"Asedio", antharas:"Antharas", valakas:"Valakas" };
       const displayName = BOSS_NAMES[e.category] || BOSS_NAMES[e.category?.toLowerCase()] || e.name.replace(/\s*\(\d{1,2}\/\d{1,2}\/\d{4}\)\s*$/, "");
       return `<tr>
         <td style="white-space:nowrap; color:var(--text2); font-size:0.75rem">${e.date ? window.fmtDate(e.date) : ""}</td>
@@ -1359,7 +1362,7 @@ window.events = function () {
       return true;
     });
 
-    const BOSS_NAMES = { ant:"Q. Ant", zaken:"Zaken", frintezza:"Frintezza", baium:"Baium", orfen:"Orfen", core:"Core", asedio:"Asedio", antharas:"Antharas" };
+    const BOSS_NAMES = { ant:"Q. Ant", zaken:"Zaken", frintezza:"Frintezza", baium:"Baium", orfen:"Orfen", core:"Core", asedio:"Asedio", antharas:"Antharas", valakas:"Valakas" };
     const getDisplayName = (e) => BOSS_NAMES[e.category] || BOSS_NAMES[e.category?.toLowerCase()] || (e.name ? e.name.replace(/\s*\(\d{1,2}\/\d{1,2}\/\d{4}\)\s*$/, "") : "Evento");
     
     const bossMap = {};
@@ -1485,6 +1488,7 @@ function eventFormHTML2(e = {}) {
         <option value="core"      ${cat === "core"      ? "selected" : ""}> Core</option>
         <option value="asedio"    ${cat === "asedio"    ? "selected" : ""}> Asedio</option>
         <option value="antharas"  ${cat === "antharas"  ? "selected" : ""}> Antharas</option>
+        <option value="valakas"   ${cat === "valakas"   ? "selected" : ""}> Valakas</option>
       </select>
     </div>
     <div class="form-row" id="ev-quest-wrap" style="display:none">
@@ -1533,7 +1537,8 @@ function gatherEventData() {
       orfen:     "Orfen",
       core:      "Core",
       asedio:    "Asedio",
-      antharas:  "Antharas"
+      antharas:  "Antharas",
+      valakas:   "Valakas"
     };
     name = catNames[category] || "Jefe";
   }
