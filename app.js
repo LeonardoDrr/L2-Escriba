@@ -305,7 +305,14 @@ window.renameClan = () => {
 function fmt(n) { return Number(n).toLocaleString("es-ES"); }
 function fmtDate(ts) {
   if (!ts) return "—";
-  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  let d;
+  if (ts.toDate) {
+    d = ts.toDate();
+  } else if (typeof ts === "string" && /^\d{4}-\d{2}-\d{2}$/.test(ts)) {
+    d = new Date(ts + "T12:00:00");
+  } else {
+    d = new Date(ts);
+  }
   return d.toLocaleDateString("es-ES");
 }
 function memberName(id) {
