@@ -214,7 +214,8 @@ window.toggleLogin = () => {
         const p = document.getElementById("l-pass").value;
         const validAdmins = [
           { u: "Leocraft", p: "Leodan3010" },
-          { u: "Trickster", p: "Trickster123" }
+          { u: "Trickster", p: "Trickster123" },
+          { u: "Selvis", p: "Selvis123" }
         ];
 
         const match = validAdmins.find(x => x.u === u && x.p === p);
@@ -256,6 +257,15 @@ function openModal(title, bodyHTML, onConfirm, confirmLabel = "Guardar") {
   document.getElementById("modal-confirm").textContent = confirmLabel;
   document.getElementById("modal-overlay").classList.add("show");
   modalCallback = onConfirm;
+
+  setTimeout(() => {
+    if (window.flatpickr) {
+      flatpickr('input[type="date"]', {
+        locale: "es",
+        dateFormat: "Y-m-d"
+      });
+    }
+  }, 10);
 }
 window.cancelModalClick = () => {
   if (modalCallback && !confirm("¿Estás seguro que deseas cerrar la ventana? Perderás los datos que no hayas guardado.")) {
@@ -732,7 +742,7 @@ function memberFormHTML(m = {}) {
         <option value="absent" ${m.status === "absent" ? "selected" : ""}>Ausente</option>
       </select>
     </div>
-    <div class="form-row"><label>Fecha de Ingreso</label><input id="f-join" type="date" value="${m.joinDate || new Date().toISOString().slice(0, 10)}"></div>
+    <div class="form-row"><label>Fecha de Ingreso</label><input id="f-join" type="date" value="${m.joinDate || new Date().toLocaleDateString('en-CA')}"></div>
     <div class="form-row col2"><label>Notas</label><textarea id="f-notes" rows="2">${m.notes || ""}</textarea></div>
   </div>`;
 }
@@ -793,4 +803,4 @@ window.delMember = async (id) => {
 };
 
 // ── IMPORT ADDITIONAL MODULES ────────────────────────────
-import("./app2.js?v=6");
+import("./app2.js?v=16");

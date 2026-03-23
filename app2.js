@@ -1,11 +1,8 @@
-// ═══════════════════════════════════════════════════════════
-//  app2.js — Módulos: Almacén, Crafts, Tesorería, Préstamos, Eventos
-// ═══════════════════════════════════════════════════════════
 import { searchItems, CATEGORY_LABELS } from "./items-db.js?v=6";
 import { getRecipeFor, isNonCraftable, evaluateCraftTree } from "./crafts-recipes.js?v=6";
 
 
-// ── WAREHOUSE ────────────────────────────────────────────
+
 const WH_CATS = ["weapon", "armor", "jewelry", "material", "consumable", "recipe", "recipe_weapon", "recipe_armor", "recipe_jewelry", "scroll", "special", "other"];
 const WH_GRADES = ["NG", "D", "C", "B", "A", "S"];
 const WH_STATUS_MAP = {
@@ -739,7 +736,7 @@ window.addTransaction = function () {
           ${window.STATE.members.map(m => `<option value="${m.id}">${m.nickname}</option>`).join("")}
         </select>
       </div>
-      <div class="form-row"><label>Fecha</label><input id="f-txdate" type="date" value="${new Date().toISOString().slice(0, 10)}"></div>
+      <div class="form-row"><label>Fecha</label><input id="f-txdate" type="date" value="${new Date().toLocaleDateString('en-CA')}"></div>
     </div>`,
     async () => {
       const amt = +document.getElementById("f-txamt").value;
@@ -902,7 +899,7 @@ window.addLoan = function () {
       <div id="adena-fields" class="form-row col2" style="display:none"><label id="lbl-adena-amt">Monto Total (Admite k/m, ej: 10k, 1.5m)</label>
         <input id="f-lamt" type="text" placeholder="Ej: 50000 o 50k o 2.5m">
       </div>
-      <div class="form-row"><label>Fecha Préstamo</label><input id="f-ldate" type="date" value="${new Date().toISOString().slice(0, 10)}"></div>
+      <div class="form-row"><label>Fecha Préstamo</label><input id="f-ldate" type="date" value="${new Date().toLocaleDateString('en-CA')}"></div>
       <div class="form-row"><label>Fecha Devolución (Vacio = Indefinido)</label><input id="f-ldue" type="date"></div>
       <div class="form-row col2"><label>Notas / Condiciones</label><textarea id="f-lnotes"></textarea></div>
     </div>`,
@@ -1156,14 +1153,11 @@ window.events = function () {
   // ── Calcular puntos separados por categoría para cada miembro ──
   const pointsMap = {};
   window.STATE.members.forEach(m => {
-    pointsMap[m.id] = { id: m.id, name: m.nickname, main: 0, farm: 0, quest: 0, daily: 0, total: 0 };
+    pointsMap[m.id] = { id: m.id, name: m.nickname, ant: 0, zaken: 0, frintezza: 0, baium: 0, orfen: 0, core: 0, asedio: 0, antharas: 0, total: 0 };
   });
 
   window.STATE.events.forEach(ev => {
-    // Si no es admin y el evento tiene categoría y no es 'main', lo saltamos (Camuflaje total)
-    if (!window.STATE.isAdmin && (ev.category && ev.category !== "main")) return;
-
-    const cat = ev.category || "main"; // retrocompatibilidad
+    const cat = ev.category || "ant"; // retrocompatibilidad
     (ev.participants || []).forEach(p => {
       if (pointsMap[p.memberId]) {
         if (pointsMap[p.memberId][cat] !== undefined) {
@@ -1176,52 +1170,56 @@ window.events = function () {
 
   const allMembers = Object.values(pointsMap).sort((a, b) => b.total - a.total);
 
-  // Totales globales por categoría
-  const globalTotals = { main: 0, farm: 0, quest: 0, daily: 0, total: 0 };
+  // Totales globales por boss
+  const globalTotals = { ant: 0, zaken: 0, frintezza: 0, baium: 0, orfen: 0, core: 0, asedio: 0, antharas: 0, total: 0 };
   allMembers.forEach(m => {
-    globalTotals.main += m.main;
-    globalTotals.farm += m.farm;
-    globalTotals.quest += m.quest;
-    globalTotals.daily += m.daily;
+    globalTotals.ant += m.ant;
+    globalTotals.zaken += m.zaken;
+    globalTotals.frintezza += m.frintezza;
+    globalTotals.baium += m.baium;
+    globalTotals.orfen += m.orfen;
+    globalTotals.core += m.core;
+    globalTotals.asedio += m.asedio;
+    globalTotals.antharas += m.antharas;
     globalTotals.total += m.total;
   });
 
   const catBadge = {
-    main: "<span class='badge badge-purple' style='margin-right:8px'><i class='ri-sword-fill'></i> Clan Principal</span>",
-    farm: "<span class='badge badge-green' style='margin-right:8px'><i class='ri-hammer-line'></i> Materiales</span>",
-    quest: "<span class='badge badge-gold' style='margin-right:8px'><i class='ri-scroll-line'></i> Ayuda Quests</span>",
-    daily: "<span class='badge badge-blue' style='margin-right:8px'><i class='ri-calendar-todo-line'></i> Diarias</span>"
+    ant:       "<span class='badge badge-purple'  style='margin-right:8px'><i class='ri-skull-line'></i> Q. Ant</span>",
+    zaken:     "<span class='badge badge-blue'    style='margin-right:8px'><i class='ri-skull-line'></i> Zaken</span>",
+    frintezza: "<span class='badge badge-gold'    style='margin-right:8px'><i class='ri-skull-line'></i> Frintezza</span>",
+    baium:     "<span class='badge badge-green'   style='margin-right:8px'><i class='ri-skull-line'></i> Baium</span>",
+    orfen:     "<span class='badge badge-purple'  style='margin-right:8px'><i class='ri-skull-line'></i> Orfen</span>",
+    core:      "<span class='badge badge-blue'    style='margin-right:8px'><i class='ri-skull-line'></i> Core</span>",
+    asedio:    "<span class='badge badge-gold'    style='margin-right:8px'><i class='ri-flag-fill'></i> Asedio</span>",
+    antharas:  "<span class='badge badge-green'   style='margin-right:8px'><i class='ri-skull-2-line'></i> Antharas</span>",
+    // retrocompatibilidad
+    main:      "<span class='badge badge-purple'  style='margin-right:8px'><i class='ri-sword-fill'></i> Clan Principal</span>",
+    farm:      "<span class='badge badge-green'   style='margin-right:8px'><i class='ri-hammer-line'></i> Materiales</span>",
+    quest:     "<span class='badge badge-gold'    style='margin-right:8px'><i class='ri-scroll-line'></i> Quests</span>",
+    daily:     "<span class='badge badge-blue'    style='margin-right:8px'><i class='ri-calendar-todo-line'></i> Diarias</span>"
   };
 
   if (window._evView === "ranking") {
     // ── VISTA RANKING (Tabla de Puntos Separados) ────────────────────────
-    let adminHeaders = "";
-    let adminFooters = "";
-    if (window.STATE.isAdmin) {
-      adminHeaders = `
-        <th style="text-align:center"> Clan Principal</th>
-        <th style="text-align:center"> Materiales</th>
-        <th style="text-align:center"> Quests / EXP</th>
-        <th style="text-align:center"> Diarias</th>
-      `;
-      adminFooters = `
-        <td style="text-align:center;font-weight:bold">${window.fmt(globalTotals.main)}</td>
-        <td style="text-align:center;font-weight:bold">${window.fmt(globalTotals.farm)}</td>
-        <td style="text-align:center;font-weight:bold">${window.fmt(globalTotals.quest)}</td>
-        <td style="text-align:center;font-weight:bold">${window.fmt(globalTotals.daily)}</td>
-      `;
-    }
+    const BOSS_COLS = [
+      { key: 'ant',       label: 'Q. Ant' },
+      { key: 'zaken',     label: 'Zaken' },
+      { key: 'frintezza', label: 'Frintezza' },
+      { key: 'baium',     label: 'Baium' },
+      { key: 'orfen',     label: 'Orfen' },
+      { key: 'core',      label: 'Core' },
+      { key: 'asedio',    label: 'Asedio' },
+      { key: 'antharas',  label: 'Antharas' },
+    ];
+    let adminHeaders = BOSS_COLS.map(b => `<th style="text-align:center">${b.label}</th>`).join("");
+    let adminFooters = BOSS_COLS.map(b => `<td style="text-align:center;font-weight:bold">${window.fmt(globalTotals[b.key])}</td>`).join("");
 
     const tableRows = allMembers.map((m, i) => {
-      let adminCells = "";
-      if (window.STATE.isAdmin) {
-        adminCells = `
-          <td style="text-align:center;color:${m.main > 0 ? 'var(--gold-light)' : 'var(--text3)'}">${m.main > 0 ? window.fmt(m.main) : "—"}</td>
-          <td style="text-align:center;color:${m.farm > 0 ? '#2ecc71' : 'var(--text3)'}">${m.farm > 0 ? window.fmt(m.farm) : "—"}</td>
-          <td style="text-align:center;color:${m.quest > 0 ? 'var(--gold)' : 'var(--text3)'}">${m.quest > 0 ? window.fmt(m.quest) : "—"}</td>
-          <td style="text-align:center;color:${m.daily > 0 ? '#3498db' : 'var(--text3)'}">${m.daily > 0 ? window.fmt(m.daily) : "—"}</td>
-        `;
-      }
+      const adminCells = BOSS_COLS.map(b =>
+        `<td style="text-align:center;color:${m[b.key] > 0 ? 'var(--gold-light)' : 'var(--text3)'}">` +
+        `${m[b.key] > 0 ? window.fmt(m[b.key]) : "—"}</td>`
+      ).join("");
       return `
       <tr>
         <td style="font-weight:600;color:var(--text);font-size:1.05rem">
@@ -1250,7 +1248,7 @@ window.events = function () {
               <tr>
                 <th>Miembro</th>
                 ${adminHeaders}
-                <th style="text-align:center;background:rgba(155,89,182,0.1);color:var(--purple-light)">${window.STATE.isAdmin ? 'Puntos Totales' : 'Puntos Del Clan'}</th>
+                <th style="text-align:center;background:rgba(155,89,182,0.1);color:var(--purple-light)">Total</th>
               </tr>
             </thead>
             <tbody>${tableRows}</tbody>
@@ -1264,56 +1262,199 @@ window.events = function () {
           </table>
         </div>
       </div>`;
-  } else {
-    // ── VISTA EVENTOS (Tarjetas) ───────────────────────────────────────
+  } else if (window._evView === "bossDetail") {
+    // ── VISTA EVENTOS DETALLE JEFE (Matriz vieja) ─────────────────────────
     const list = window.STATE.events.filter(e => {
-      if (q && !(e.name || "").toLowerCase().includes(q)) return false;
-      if (!window.STATE.isAdmin && (e.category && e.category !== "main")) return false;
+      const boss = (window._selectedBossForDetail || "").toLowerCase();
+      // Filtrar por el boss seleccionado
+      const eName = (e.name || "").toLowerCase();
+      const eCat = (e.category || "").toLowerCase();
+      if (boss && !eName.includes(boss) && !eCat.includes(boss)) return false;
+      if (q && !eName.includes(q)) return false;
       return true;
     });
-    const cards = list.slice().reverse().map(e => {
-      const pts = (e.participants || []).reduce((s, p) => s + +p.points, 0);
-      const catHTML = catBadge[e.category] || catBadge["main"];
-      const questDetailsHTML = (e.category === "quest" && e.questDetail)
-        ? `<div style="font-size:.8rem;color:var(--gold);margin-bottom:8px;background:rgba(212,160,23,0.1);padding:4px 8px;border-radius:4px;display:inline-block"><i class="ri-question-answer-line"></i> ${e.questDetail}</div><br>`
-        : "";
 
-      return `<div class="card" style="margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div style="flex:1">
-          ${catHTML}
-          <b style="color:var(--text);font-size:1.05rem">${e.name}</b>
-          ${e.date ? `<span style="color:var(--text3);font-size:.78rem;margin-left:8px"><i class="ri-calendar-line"></i> ${window.fmtDate(e.date)}</span>` : ""}
-        </div>
-        <span class="badge badge-gold">${(e.participants || []).length} participantes</span>
-        <span class="badge badge-purple">${window.fmt(pts)} pts entregados</span>
+    const eventsDesc = list.slice().reverse();
+
+    const memberCols = window.STATE.members.map(m => `<th style="text-align:center; min-width:40px; font-size:0.65rem;" title="${m.class || ''}">${m.nickname.substring(0,6)}...</th>`).join("");
+
+    const tableRows = eventsDesc.map(e => {
+      const pts = (e.participants || []).reduce((s, p) => s + +p.points, 0);
+      const catHTML = catBadge[e.category] || catBadge["ant"];
+      
+      const memberCells = window.STATE.members.map(m => {
+        const p = (e.participants || []).find(x => x.memberId === m.id);
+        if (!p) return `<td style="text-align:center; color:var(--text3); font-size:0.75rem;">-</td>`;
+        
+        const ann = p.anno || {};
+        let annos = [];
+        if (ann.L) annos.push("L");
+        if (ann.D) annos.push("D");
+        if (ann.P) annos.push("P");
+        const annoStr = annos.length > 0 ? `<span style="color:var(--text3);font-size:0.6rem;margin-left:2px;letter-spacing:-0.5px">(${annos.join(",")})</span>` : "";
+        
+        return `<td style="text-align:center; font-weight:600; color:var(--gold-light); font-size:0.75rem;">${window.fmt(p.points)}${annoStr}</td>`;
+      }).join("");
+
+      const BOSS_NAMES = { ant:"Q. Ant", zaken:"Zaken", frintezza:"Frintezza", baium:"Baium", orfen:"Orfen", core:"Core", asedio:"Asedio", antharas:"Antharas" };
+      const displayName = BOSS_NAMES[e.category] || BOSS_NAMES[e.category?.toLowerCase()] || e.name.replace(/\s*\(\d{1,2}\/\d{1,2}\/\d{4}\)\s*$/, "");
+      return `<tr>
+        <td style="white-space:nowrap; color:var(--text2); font-size:0.75rem">${e.date ? window.fmtDate(e.date) : ""}</td>
+        <td style="min-width:140px;">
+          <div style="display:flex;align-items:center;gap:6px">
+            <div>
+              <b style="color:var(--text);font-size:0.85rem;">${displayName}</b>
+              <div style="margin-top:2px; transform: scale(0.85); transform-origin: left; white-space:nowrap">${catHTML}</div>
+            </div>
+          </div>
+        </td>
+        ${memberCells}
+        <td style="text-align:center; font-weight:bold; color:var(--purple); background:rgba(155,89,182,0.1); font-size:0.8rem">${window.fmt(pts)}</td>
         ${window.STATE.isAdmin ? `
-        <button class="btn btn-ghost btn-icon btn-sm" onclick="editEvent('${e.id}')"><i class="ri-edit-line"></i></button>
-        <button class="btn btn-danger btn-icon btn-sm" onclick="delEvent('${e.id}')"><i class="ri-delete-bin-line"></i></button>
-        ` : ''}
-      </div>
-        ${questDetailsHTML}
-        ${e.description ? `<div style="font-size:.8rem;color:var(--text2);margin-bottom:10px">${e.description}</div>` : ""}
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-      ${(e.participants || []).map(p =>
-        `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.8rem;display:flex;align-items:center;gap:8px">
-              <span style="color:var(--text2)">${window.memberName(p.memberId)}</span>
-              <span style="font-weight:bold;color:var(--gold-light)">${window.fmt(p.points)} pts</span>
-            </div>`
-      ).join("")}
-        </div>
-      </div>`;
-    }).join("") || `<div class="empty-state"><i class="ri-sword-line"></i><p>No hay eventos registrados</p></div>`;
+        <td style="text-align:right; white-space:nowrap; padding: 2px 4px;">
+          <button class="btn btn-ghost btn-icon btn-sm" onclick="editEvent('${e.id}')" style="padding:2px 4px"><i class="ri-edit-line"></i></button>
+          <button class="btn btn-danger btn-icon btn-sm" onclick="delEvent('${e.id}')" style="padding:2px 4px"><i class="ri-delete-bin-line"></i></button>
+        </td>` : ''}
+      </tr>`;
+    }).join("") || `<tr><td colspan="${window.STATE.members.length + 4}"><div class="empty-state"><i class="ri-file-list-3-line"></i><p>No hay eventos registrados</p></div></td></tr>`;
 
     document.getElementById("content").innerHTML = `
+      <style>
+        .matrix-table { width: 100%; min-width: max-content; border-collapse: separate; border-spacing: 0; }
+        .matrix-table th { position: sticky; top: 0; z-index: 10; background: var(--bg3); border-bottom: 1px solid var(--border); padding: 6px 4px !important; }
+        .matrix-table td { padding: 4px 6px !important; border-bottom: 1px solid rgba(42,38,80,.5); }
+        .matrix-table tbody tr:hover td { background: rgba(255,255,255,.03); }
+      </style>
       <div class="filters">
-        <input class="search-input" id="ev-q" placeholder="🔍 Buscar evento por nombre..." oninput="events()" value="">
+        <button class="btn btn-ghost btn-sm" onclick="window._evView='events'; window.events();" style="gap:6px"><i class="ri-arrow-left-line"></i> Volver a Matriz General</button>
+        <input class="search-input" id="ev-q" placeholder="🔍 Buscar..." oninput="events()" value="">
+      </div>
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div style="padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px">
+          <i class="ri-file-list-3-line" style="color:var(--gold);font-size:1.1rem"></i>
+          <b style="color:var(--gold-light);font-size:0.95rem">Participaciones: ${window._selectedBossForDetail}</b>
+          <span class="badge badge-gray" style="margin-left:auto">${eventsDesc.length} participaciones</span>
+        </div>
+        <div class="table-wrap" style="box-shadow:none; max-height: 65vh; overflow:auto;">
+          <table class="matrix-table">
+            <thead>
+              <tr>
+                <th style="min-width:70px">Fecha</th>
+                <th>Boss / Evento</th>
+                ${memberCols}
+                <th style="text-align:center; min-width:60px">Total</th>
+                ${window.STATE.isAdmin ? `<th style="width:50px"></th>` : ''}
+              </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>
+      </div>`;
+    
+    document.getElementById("ev-q").value = q;
+  } else {
+    // ── VISTA EVENTOS (Matriz Moderna Dark Theme) ─────────────────────────
+    const list = window.STATE.events.filter(e => {
+      if (q && !(e.name || "").toLowerCase().includes(q)) return false;
+      return true;
+    });
+
+    const BOSS_NAMES = { ant:"Q. Ant", zaken:"Zaken", frintezza:"Frintezza", baium:"Baium", orfen:"Orfen", core:"Core", asedio:"Asedio", antharas:"Antharas" };
+    const getDisplayName = (e) => BOSS_NAMES[e.category] || BOSS_NAMES[e.category?.toLowerCase()] || (e.name ? e.name.replace(/\s*\(\d{1,2}\/\d{1,2}\/\d{4}\)\s*$/, "") : "Evento");
+    
+    const bossMap = {};
+    for (const e of list) {
+      const bName = getDisplayName(e);
+      if (!bossMap[bName]) {
+        bossMap[bName] = { 
+          displayName: bName, 
+          latestDate: e.date, 
+          participationsMap: {}
+        };
+      }
+      const bObj = bossMap[bName];
+      // Actualizar a la fecha más reciente si corresponde
+      if (e.date && (!bObj.latestDate || new Date(e.date) > new Date(bObj.latestDate))) {
+          bObj.latestDate = e.date;
+      }
+      // Sumar los puntos de cada participante
+      for (const p of (e.participants || [])) {
+          bObj.participationsMap[p.memberId] = (bObj.participationsMap[p.memberId] || 0) + Number(p.points);
+      }
+    }
+    
+    // Convertir a array y ordenar desde la actividad más vieja a la más nueva (o por su fecha más reciente)
+    const bossList = Object.values(bossMap).sort((a,b) => new Date(a.latestDate) - new Date(b.latestDate));
+
+    const memberCols = window.STATE.members.map(m => `<th style="text-align:center; font-weight:600;">${m.nickname}</th>`).join("");
+
+    let currentAcumula = 0;
+    const tableRows = bossList.map(b => {
+      let bPts = 0;
+      
+      const memberCells = window.STATE.members.map(m => {
+        const pts = b.participationsMap[m.id] || 0;
+        bPts += pts;
+        
+        if (pts === 0) return `<td style="text-align:center; color:var(--text3); font-size:0.85rem;">-</td>`;
+        return `<td style="text-align:center; font-weight:600; color:var(--gold-light); font-size:0.9rem;">${pts}</td>`;
+      }).join("");
+
+      currentAcumula += bPts;
+
+      let dateFormatted = b.latestDate ? new Date(b.latestDate + "T12:00:00").toLocaleDateString('es-ES', {day:'numeric', month:'short'}) : "";
+
+      return `<tr>
+        <td style="white-space:nowrap; text-align:center; color:var(--text2); font-size:0.8rem;">${dateFormatted}</td>
+        <td style="font-weight:600; color:var(--text); cursor:pointer; font-size:0.85rem; border-right:1px solid rgba(255,255,255,0.05);" onclick="window._evView='bossDetail'; window._selectedBossForDetail='${b.displayName}'; window.events();" title="Clic para ver detalle">
+          <span style="border-bottom:1px dashed var(--gold);">${b.displayName}</span>
+        </td>
+        ${memberCells}
+        <td style="text-align:center; font-weight:700; color:var(--purple); background:rgba(155,89,182,0.1); font-size:0.9rem;">${bPts}</td>
+        <td style="text-align:center; font-weight:700; color:var(--gold-light); background:rgba(212,175,55,0.1); font-size:0.9rem;">${currentAcumula}</td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="${window.STATE.members.length + 4}"><div class="empty-state"><p>No hay eventos registrados</p></div></td></tr>`;
+
+    document.getElementById("content").innerHTML = `
+      <style>
+        .dense-matrix { width: 100%; min-width: max-content; border-collapse: collapse; }
+        .dense-matrix th, .dense-matrix td { padding: 8px 10px !important; border-bottom: 1px solid rgba(42,38,80,.5); }
+        .dense-matrix thead th { background: var(--bg3); color: var(--text2); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid var(--border); }
+        .dense-matrix tbody tr:hover td { background: rgba(255,255,255,0.03); }
+        .dense-matrix tbody td { border-right: 1px solid rgba(255,255,255,0.02); }
+        .dense-matrix tbody td:last-child { border-right: none; }
+      </style>
+      <div class="filters">
+        <input class="search-input" id="ev-q" placeholder="🔍 Buscar boss/evento..." oninput="events()" value="">
         <button class="btn btn-ghost btn-sm" onclick="showRanking()" style="gap:6px;white-space:nowrap;background:rgba(155,89,182,0.1);color:var(--purple-light);border:1px solid var(--purple)">
           <i class="ri-bar-chart-2-line"></i> ${window.STATE.isAdmin ? 'Ver Puntos Separados' : 'Estadísticas Generales'}
         </button>
       </div>
-      ${cards}`;
-
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div style="padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px">
+          <i class="ri-table-2" style="color:var(--gold);font-size:1.1rem"></i>
+          <b style="color:var(--gold-light);font-size:0.95rem">Registro de Eventos Global</b>
+          <span class="badge badge-gray" style="margin-left:auto">${bossList.length} jefes registrados</span>
+        </div>
+        <div class="table-wrap" style="box-shadow:none; max-height: 75vh; overflow:auto;">
+          <table class="dense-matrix">
+            <thead>
+              <tr>
+                <th rowspan="2" style="min-width:60px; text-align:center; border-right:1px solid var(--border)">Fecha</th>
+                <th rowspan="2" style="min-width:80px; text-align:left; border-right:1px solid var(--border)">Boss</th>
+                <th colspan="${window.STATE.members.length}" style="text-align:center; border-right:1px solid var(--border); border-bottom:1px solid var(--border)">Miembros de la CP</th>
+                <th rowspan="2" style="min-width:60px; text-align:center; background:rgba(155,89,182,0.1); color:var(--purple-light); border-right:1px solid var(--border)">CP suma</th>
+                <th rowspan="2" style="min-width:70px; text-align:center; background:rgba(212,175,55,0.1); color:var(--gold-light)">CP Acumula</th>
+              </tr>
+              <tr>
+                ${memberCols}
+              </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>
+      </div>`;
+    
     document.getElementById("ev-q").value = q;
   }
 };
@@ -1324,27 +1465,31 @@ function eventFormHTML2(e = {}) {
     <div class="form-row col2"><label>Nombre del Evento / Sesión</label>
       <input id="f-ename" value="${e.name || ""}" placeholder="Ej: Siege de Rune, Raid Antharas, Farmeo Varka...">
     </div>
-    <div class="form-row"><label>Fecha</label><input id="f-edate" type="date" value="${e.date || new Date().toISOString().slice(0, 10)}"></div>
-    <div class="form-row">
+    <div class="form-row"><label>Fecha</label><input id="f-edate" type="date" value="${e.date || new Date().toLocaleDateString('en-CA')}"></div>
+  <div class="form-row">
       <label>Puntos Máximos (Límite)</label>
       <div style="display:flex; flex-direction:column; gap:8px;">
-        <input id="f-edefpts" type="number" min="0" value="${e.defaultPoints || 100}" oninput="if(document.getElementById('f-eauto')?.checked) { document.querySelectorAll('.ev-check:checked').forEach(c => c.parentElement.querySelector('input[type=number]').value = this.value); }">
+        <input id="f-edefpts" type="number" min="0" value="${e.defaultPoints || 1}" oninput="if(document.getElementById('f-eauto')?.checked) { document.querySelectorAll('.ev-check:checked').forEach(c => c.parentElement.querySelector('input[type=number]').value = this.value); }">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin:0;font-size:0.85rem;background:var(--bg3);padding:8px 10px;border-radius:6px;border:1px solid var(--border);">
           <input type="checkbox" id="f-eauto" checked style="width:auto;margin:0"> Auto-asignar a seleccionados
         </label>
       </div>
     </div>
-    <div class="form-row"><label>Categoría</label>
-      <select id="f-ecat" onchange="document.getElementById('ev-quest-wrap').style.display = this.value === 'quest' ? 'block' : 'none'">
-        <option value="main" ${cat === "main" ? "selected" : ""}>⚔️ Participación al Clan Principal</option>
-        <option value="farm" ${cat === "farm" ? "selected" : ""}>🪓 Materiales (Farmeo)</option>
-        <option value="quest" ${cat === "quest" ? "selected" : ""}>📜 Ayuda Quests / EXP</option>
-        <option value="daily" ${cat === "daily" ? "selected" : ""}>📅 Ayuda Diarias</option>
+    <div class="form-row"><label>Boss / Jefe</label>
+      <select id="f-ecat">
+        <option value="ant"       ${cat === "ant"       ? "selected" : ""}> Q. Ant</option>
+        <option value="zaken"     ${cat === "zaken"     ? "selected" : ""}> Zaken</option>
+        <option value="frintezza" ${cat === "frintezza" ? "selected" : ""}> Frintezza</option>
+        <option value="baium"     ${cat === "baium"     ? "selected" : ""}> Baium</option>
+        <option value="orfen"     ${cat === "orfen"     ? "selected" : ""}> Orfen</option>
+        <option value="core"      ${cat === "core"      ? "selected" : ""}> Core</option>
+        <option value="asedio"    ${cat === "asedio"    ? "selected" : ""}> Asedio</option>
+        <option value="antharas"  ${cat === "antharas"  ? "selected" : ""}> Antharas</option>
       </select>
     </div>
-    <div class="form-row" id="ev-quest-wrap" style="display:${cat === 'quest' ? 'block' : 'none'}">
-       <label>¿Qué quest o ayuda se realizó?</label>
-       <input id="f-equest" value="${e.questDetail || ""}" placeholder="Ej: Tercera clase de Noxhell...">
+    <div class="form-row" id="ev-quest-wrap" style="display:none">
+       <label>Detalle adicional</label>
+       <input id="f-equest" value="${e.questDetail || ""}" placeholder="Notas adicionales...">
     </div>
     
     <div class="form-row col2"><label>Descripción / Notas extra</label><textarea id="f-edesc">${e.description || ""}</textarea></div>
@@ -1353,11 +1498,19 @@ function eventFormHTML2(e = {}) {
       <div id="ev-participants">
         ${window.STATE.members.map(m => {
     const p = (e.participants || []).find(p => p.memberId === m.id);
-    return `<div class="ev-member-row">
-            <input type="checkbox" class="ev-check" id="ev-chk-${m.id}" ${p ? "checked" : ""} onchange="if(this.checked && document.getElementById('f-eauto')?.checked) { document.getElementById('ev-pts-${m.id}').value = document.getElementById('f-edefpts').value; }">
-            <label class="ev-name" for="ev-chk-${m.id}">${m.nickname} <span style="color:var(--text3);font-size:.7rem">(${m.class || ""})</span></label>
-            <input type="number" min="0" value="${p ? p.points : 0}" style="width:70px" id="ev-pts-${m.id}" oninput="let mx=+document.getElementById('f-edefpts').value; if(+this.value > mx) this.value = mx;">
-            <span style="font-size:.7rem;color:var(--text3)">pts</span>
+    const ann = p?.anno || {};
+    return `<div class="ev-member-row" style="flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:200px">
+              <input type="checkbox" class="ev-check" id="ev-chk-${m.id}" ${p ? "checked" : ""} onchange="if(this.checked && document.getElementById('f-eauto')?.checked) { document.getElementById('ev-pts-${m.id}').value = document.getElementById('f-edefpts').value; }">
+              <label class="ev-name" for="ev-chk-${m.id}">${m.nickname} <span style="color:var(--text3);font-size:.7rem">(${m.class || ""})</span></label>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <label style="font-size:.75rem;display:flex;align-items:center;gap:3px;cursor:pointer" title="Líder (L)"><input type="checkbox" id="ev-anno-L-${m.id}" ${ann.L ? "checked" : ""}>L</label>
+              <label style="font-size:.75rem;display:flex;align-items:center;gap:3px;cursor:pointer" title="Inquisidor/Driver (D)"><input type="checkbox" id="ev-anno-D-${m.id}" ${ann.D ? "checked" : ""}>D</label>
+              <label style="font-size:.75rem;display:flex;align-items:center;gap:3px;cursor:pointer" title="Sin Líder Propio (P)"><input type="checkbox" id="ev-anno-P-${m.id}" ${ann.P ? "checked" : ""}>P</label>
+              <input type="number" min="0" value="${p ? p.points : 0}" style="width:70px;margin-left:8px" id="ev-pts-${m.id}" oninput="let mx=+document.getElementById('f-edefpts').value; if(+this.value > mx) this.value = mx;">
+              <span style="font-size:.7rem;color:var(--text3)">pts</span>
+            </div>
           </div>`;
   }).join("")}
       </div>
@@ -1371,20 +1524,32 @@ function gatherEventData() {
   const dateStr = document.getElementById("f-edate").value;
 
   if (!name) {
-    // Si no hay nombre, generar uno genérico basado en la categoría
+    // Si no hay nombre, generar uno genérico basado en el boss
     const catNames = {
-      main: "Participación",
-      farm: "Día de Materiales",
-      quest: "Apoyo en Quests",
-      daily: "Apoyo en Diarias"
+      ant:       "Q. Ant",
+      zaken:     "Zaken",
+      frintezza: "Frintezza",
+      baium:     "Baium",
+      orfen:     "Orfen",
+      core:      "Core",
+      asedio:    "Asedio",
+      antharas:  "Antharas"
     };
-    name = `${catNames[category] || "Evento"} (${window.fmtDate(dateStr)})`;
+    name = catNames[category] || "Jefe";
   }
 
   const participants = window.STATE.members
     // Corrección crítica: sin espacios en los ID del template literal
     .filter(m => document.getElementById(`ev-chk-${m.id}`)?.checked)
-    .map(m => ({ memberId: m.id, points: +(document.getElementById(`ev-pts-${m.id}`)?.value) || 0 }));
+    .map(m => ({
+      memberId: m.id, 
+      points: +(document.getElementById(`ev-pts-${m.id}`)?.value) || 0,
+      anno: {
+        L: document.getElementById(`ev-anno-L-${m.id}`)?.checked || false,
+        D: document.getElementById(`ev-anno-D-${m.id}`)?.checked || false,
+        P: document.getElementById(`ev-anno-P-${m.id}`)?.checked || false,
+      }
+    }));
 
   return {
     name,
@@ -1537,7 +1702,7 @@ function equipmentFormHTML(e = {}) {
     </div>
   `;
 }
-
+ 
 function gatherEquipmentData() {
   const memberId = document.getElementById("f-eq-member").value;
   const status = document.getElementById("f-eq-status").value;
