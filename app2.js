@@ -681,77 +681,145 @@ window.delCraft = async (id) => {
   window.toast("Eliminado", "info"); window.crafts();
 };
 
-// ── TREASURY ────────────────────────────────────────────
 window.treasury = function () {
   const q = (document.getElementById("tr-q")?.value || "").toLowerCase();
   const ft = document.getElementById("tr-type")?.value || "";
+
   const list = window.STATE.treasury.filter(t => {
-    if (q && !(t.description || "").toLowerCase().includes(q)) return false;
-    if (ft && t.type !== ft) return false;
+    if (q && !(t.description || "").toLowerCase().includes(q) && !(t.itemName || "").toLowerCase().includes(q)) return false;
+    
+    // Backwards compatibility mapping for filtering
+    const effectiveType = (t.type === 'income' || t.type === 'expense') ? 'adena' : (t.type || 'adena');
+    if (ft && effectiveType !== ft && t.type !== ft) return false;
     return true;
   });
-  const income = window.STATE.treasury.filter(t => t.type === "income").reduce((s, t) => s + +t.amount, 0);
-  const expense = window.STATE.treasury.filter(t => t.type === "expense").reduce((s, t) => s + +t.amount, 0);
-  const balance = income - expense;
-  const rows = list.slice().reverse().map(t => `
+  
+  const rows = list.slice().reverse().map(t => {
+    const isItem = t.type === 'item' || t.itemName;
+    const itemBadge = t.itemName ? `<div style="margin-top:4px"><span style="font-size:0.8rem;color:var(--gold-light);background:var(--bg3);padding:2px 6px;border-radius:4px;border:1px solid var(--border);"><i class="ri-shield-user-line"></i> <b>${t.itemName}</b></span></div>` : "";
+    
+    const typeLabel = isItem ? "<span class='badge badge-gold'>Item L2</span>" : "<span class='badge badge-blue'>Adena</span>";
+    const amountHtml = isItem ? "—" : `<span style="font-weight:600;color:var(--gold-light)">${window.fmt(t.amount)} ₳</span>`;
+    
+    return `
     <tr>
       <td>${window.fmtDate(t.date)}</td>
-      <td>${t.type === "income" ? "<span class='badge badge-green'>Ingreso</span>" : "<span class='badge badge-red'>Gasto</span>"}</td>
-      <td>${t.description || "—"}</td>
-      <td>${window.memberName(t.memberId)}</td>
-      <td style="font-weight:600;color:${t.type === 'income' ? 'var(--green)' : 'var(--red)'}">
-        ${t.type === "income" ? "+" : "−"}${window.fmt(t.amount)} ₳</td>
-      <td>${window.STATE.isAdmin ? `<button class="btn btn-danger btn-icon btn-sm" onclick="delTx('${t.id}')"><i class="ri-delete-bin-line"></i></button>` : ''}</td>
-    </tr>`).join("") || `<tr><td colspan="6"><div class="empty-state"><i class="ri-coin-line"></i><p>Sin transacciones</p></div></td></tr>`;
+      <td>${typeLabel}</td>
+      <td>${t.description || "—"}${itemBadge}</td>
+      <td style="color:var(--text2)">Adquirido del Clan Principal</td>
+      <td>${amountHtml}</td>
+      <td style="display:flex;gap:4px">
+        ${window.STATE.isAdmin ? `
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="editTx('${t.id}')" title="Editar"><i class="ri-edit-line"></i></button>
+        <button class="btn btn-danger btn-icon btn-sm" onclick="delTx('${t.id}')" title="Eliminar"><i class="ri-delete-bin-line"></i></button>
+        ` : ''}
+      </td>
+    </tr>`
+  }).join("") || `<tr><td colspan="6"><div class="empty-state"><i class="ri-treasure-map-line"></i><p>Sin adquisiciones registradas</p></div></td></tr>`;
 
   document.getElementById("content").innerHTML = `
     <div class="stats-grid" style="margin-bottom:16px">
-      <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-label">Ingresos</div><div class="stat-value" style="color:var(--green);font-size:1.1rem">${window.fmt(income)} ₳</div></div>
-      <div class="stat-card"><div class="stat-icon">📉</div><div class="stat-label">Gastos</div><div class="stat-value" style="color:var(--red);font-size:1.1rem">${window.fmt(expense)} ₳</div></div>
-      <div class="stat-card"><div class="stat-icon">⚖️</div><div class="stat-label">Balance</div><div class="stat-value" style="font-size:1.1rem;color:${balance < 0 ? 'var(--red)' : 'var(--gold-light)'}">${window.fmt(balance)} ₳</div></div>
+      <div class="stat-card"><div class="stat-icon">📜</div><div class="stat-label">Total Adquisiciones Registradas</div><div class="stat-value" style="color:var(--gold-light);font-size:1.1rem">${window.STATE.treasury.length}</div></div>
     </div>
     <div class="filters">
       <input class="search-input" id="tr-q" placeholder="🔍 Buscar..." oninput="treasury()" value="${q}">
       <select class="filter-sel" id="tr-type" onchange="treasury()">
-        <option value="">Todas</option><option value="income">Ingresos</option><option value="expense">Gastos</option>
+        <option value="">Todos los Tipos</option>
+        <option value="adena">Adena</option>
+        <option value="item">Items</option>
       </select>
     </div>
     <div class="table-wrap"><table>
-      <thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Miembro</th><th>Monto</th><th></th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción / Item</th><th>Origen</th><th>Monto</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
 };
 
+window.toggleTxFields = function() {
+  const t = document.getElementById("f-txtype")?.value;
+  const wAmt = document.getElementById("wrap-txamt");
+  const wItm = document.getElementById("wrap-txitem");
+  if (wAmt && wItm) {
+    if (t === 'adena') { wAmt.style.display = 'block'; wItm.style.display = 'none'; }
+    else { wAmt.style.display = 'none'; wItm.style.display = 'block'; }
+  }
+};
+
+function treasuryFormHTML(t = {}) {
+  let type = t.type || "adena";
+  if (type === "income" || type === "expense") type = "adena";
+  if (t.itemName && !t.type) type = "item";
+
+  const amount = t.amount || "";
+  const desc = t.description || "";
+  const date = t.date || new Date().toLocaleDateString('en-CA');
+  const itemName = t.itemName || "";
+
+  return `
+    <div class="form-grid">
+      <div class="form-row"><label>Tipo de Adquisición</label>
+        <select id="f-txtype" onchange="window.toggleTxFields()">
+          <option value="adena" ${type === "adena" ? "selected" : ""}>Adena</option>
+          <option value="item" ${type === "item" ? "selected" : ""}>Items L2</option>
+        </select>
+      </div>
+      <div class="form-row" id="wrap-txamt" style="display: ${type === 'adena' ? 'block' : 'none'};"><label>Monto (Adena)</label><input id="f-txamt" type="number" min="0" placeholder="0" value="${amount}"></div>
+      <div class="form-row col2" id="wrap-txitem" style="display: ${type === 'item' ? 'block' : 'none'};"><label>Item Adquirido / Importante</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="f-txitem" value="${itemName}" placeholder="Buscar item L2..." autocomplete="off" oninput="acSearch(this.value, 'f-txitem', 'ac-tx-item')">
+          <div class="autocomplete-list" id="ac-tx-item"></div>
+        </div>
+      </div>
+      <div class="form-row col2"><label>Descripción / Concepto (Opcional)</label><input id="f-txdesc" value="${desc}" placeholder="Ej: Drop de Boss, Venta grupal..."></div>
+      <div class="form-row col2"><label>Fecha</label><input id="f-txdate" type="date" value="${date}"></div>
+    </div>`;
+}
+
+function gatherTreasuryData() {
+  const type = document.getElementById("f-txtype").value;
+  const amt = type === 'adena' ? +document.getElementById("f-txamt").value : 0;
+  const itemName = type === 'item' ? document.getElementById("f-txitem").value.trim() : "";
+  const desc = document.getElementById("f-txdesc").value.trim();
+  
+  if (type === 'adena' && !amt) {
+     window.toast("Ingresa un monto de Adena válido", "error"); return null;
+  }
+  if (type === 'item' && !itemName) {
+     window.toast("Busca y selecciona un Item L2", "error"); return null;
+  }
+  
+  return {
+    type: type, amount: amt, description: desc,
+    itemName: itemName,
+    memberId: "clan", // Fixed to always be Clan instead of a member
+    date: document.getElementById("f-txdate").value
+  };
+}
+
 window.addTransaction = function () {
   if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
   window.openModal("<i class='ri-coins-line'></i> Nueva Transacción",
-    `<div class="form-grid">
-      <div class="form-row"><label>Tipo</label>
-        <select id="f-txtype"><option value="income">Ingreso</option><option value="expense">Gasto</option></select>
-      </div>
-      <div class="form-row"><label>Monto (Adena)</label><input id="f-txamt" type="number" min="0" placeholder="0"></div>
-      <div class="form-row col2"><label>Descripción</label><input id="f-txdesc" placeholder="Ej: Donación, Compra de item..."></div>
-      <div class="form-row"><label>Miembro</label>
-        <select id="f-txmem"><option value="">Sin asignar</option>
-          ${window.STATE.members.map(m => `<option value="${m.id}">${m.nickname}</option>`).join("")}
-        </select>
-      </div>
-      <div class="form-row"><label>Fecha</label><input id="f-txdate" type="date" value="${new Date().toLocaleDateString('en-CA')}"></div>
-    </div>`,
+    treasuryFormHTML(),
     async () => {
-      const amt = +document.getElementById("f-txamt").value;
-      const desc = document.getElementById("f-txdesc").value.trim();
-      if (!amt || !desc) { window.toast("Monto y descripción son obligatorios", "error"); return false; }
-      const data = {
-        type: document.getElementById("f-txtype").value, amount: amt, description: desc,
-        memberId: document.getElementById("f-txmem").value, date: document.getElementById("f-txdate").value
-      };
+      const data = gatherTreasuryData(); if (!data) return false;
       const id = await window.saveFireDoc(`clans/${window.CLAN_ID}/treasury`, null, data);
       window.STATE.treasury.push({ id, ...data });
       window.toast("Guardado", "success"); window.treasury();
     }
   );
 };
+
+window.editTx = function (id) {
+  if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
+  const t = window.STATE.treasury.find(x => x.id === id); if (!t) return;
+  window.openModal(`<i class='ri-edit-2-line'></i> Editar Transacción`, treasuryFormHTML(t), async () => {
+    const data = gatherTreasuryData(); if (!data) return false;
+    await window.saveFireDoc(`clans/${window.CLAN_ID}/treasury`, id, data);
+    Object.assign(t, data);
+    window.toast("Transacción actualizada", "success"); window.treasury();
+  });
+};
+
 window.delTx = async (id) => {
   if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
   if (!confirm("¿Eliminar?")) return;
