@@ -1817,3 +1817,181 @@ window.delEquipment = async function (id) {
   await window.delFireDoc(`clans/${window.CLAN_ID}/equipment`, id);
   window.toast("Eliminado", "info");
 };
+
+// ── DESEADO ─────────────────────────────────────────────
+window.desired = function () {
+  const q = (document.getElementById("ds-q")?.value || "").toLowerCase();
+  const fm = document.getElementById("ds-member")?.value || "";
+  const fs = document.getElementById("ds-status")?.value || "";
+
+  const list = window.STATE.desired.filter(d => {
+    if (fm && d.memberId !== fm) return false;
+    if (fs && d.status !== fs) return false;
+    // Check inside items
+    if (q) {
+      const mn = window.memberName(d.memberId).toLowerCase();
+      const hasItem = (d.items || []).some(it => it.name.toLowerCase().includes(q));
+      if (!mn.includes(q) && !hasItem) return false;
+    }
+    return true;
+  });
+
+  const stBadge = s => ({
+    active: "<span class='badge badge-blue'>Activo</span>",
+    fulfilled: "<span class='badge badge-green'>Cumplido</span>"
+  }[s] || s);
+
+  const rows = list.map(d => {
+    const itemsHtml = `<div style="display:flex;flex-direction:column;gap:3px">` +
+        (d.items || []).map(it => `<div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:0.75rem;color:var(--text);background:var(--bg3);padding:3px 8px;border-radius:5px;border:1px solid var(--border);">
+            <b>${it.name}</b>
+          </span>
+          <span style="color:var(--gold-light);font-size:0.75rem;font-weight:600;">x${it.qty}</span>
+        </div>`).join("") + `</div>`;
+
+    return `
+    <tr>
+      <td><b>${window.memberName(d.memberId)}</b></td>
+      <td>${itemsHtml}</td>
+      <td>${stBadge(d.status)}</td>
+      <td>${window.fmtDate(d.dateAdded)}</td>
+      <td style="font-size:0.8rem;color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.notes || ''}">${d.notes || '-'}</td>
+      <td style="display:flex;gap:4px">
+        ${window.STATE.isAdmin ? `
+        ${d.status === "active" ? `<button class="btn btn-ghost btn-sm" onclick="fulfillDesired('${d.id}')" title="Marcar como Cumplido">✓</button>` : ""}
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="editDesired('${d.id}')" title="Editar"><i class="ri-edit-line"></i></button>
+        <button class="btn btn-danger btn-icon btn-sm" onclick="delDesired('${d.id}')" title="Eliminar"><i class="ri-delete-bin-line"></i></button>
+        ` : ''}
+      </td>
+    </tr>
+    `;
+  }).join("") || `<tr><td colspan="6"><div class="empty-state"><i class="ri-heart-add-line"></i><p>No hay ítems deseados registrados</p></div></td></tr>`;
+
+  document.getElementById("content").innerHTML = `
+    <div class="filters">
+      <select class="filter-sel" id="ds-member" onchange="desired()">
+        <option value="" ${fm === "" ? "selected" : ""}>Todos los Miembros</option>
+        ${window.STATE.members.map(m => `<option value="${m.id}" ${fm === m.id ? "selected" : ""}>${m.nickname}</option>`).join("")}
+      </select>
+      <select class="filter-sel" id="ds-status" onchange="desired()">
+        <option value="" ${fs === "" ? "selected" : ""}>Todos los Estados</option>
+        <option value="active" ${fs === "active" ? "selected" : ""}>Activo</option>
+        <option value="fulfilled" ${fs === "fulfilled" ? "selected" : ""}>Cumplido</option>
+      </select>
+      <input class="search-input" id="ds-q" placeholder="🔍 Buscar miembro o ítem..." oninput="desired()" value="${q}">
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Miembro</th><th>Ítems Deseados</th><th>Estado</th><th>Fecha Registro</th><th>Notas</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+};
+
+// MULTI-ITEM LOGIC FOR DESIRED
+window._desiredItems = [];
+window.addDesiredItemRow = () => { window._desiredItems.push({ name: "", qty: 1 }); renderDesiredItemRows(); };
+window.rmDesiredItemRow = (idx) => { window._desiredItems.splice(idx, 1); renderDesiredItemRows(); };
+window.updDesiredItemName = (idx, val) => { window._desiredItems[idx].name = val; };
+window.updDesiredItemQty = (idx, val) => { window._desiredItems[idx].qty = val; };
+
+function renderDesiredItemRows() {
+  const c = document.getElementById("desired-items-container");
+  if (!c) return;
+  c.innerHTML = window._desiredItems.map((m, i) => `
+    <div class="form-grid" style="margin-bottom:8px">
+      <div class="form-row col2">
+        <div class="autocomplete-wrap">
+          <input type="text" id="ds-it-${i}" value="${m.name}" placeholder="Buscar item L2..." oninput="updDesiredItemName(${i}, this.value); acSearch(this.value, 'ds-it-${i}', 'ac-ds-it-${i}')" autocomplete="off">
+          <div class="autocomplete-list" id="ac-ds-it-${i}"></div>
+        </div>
+      </div>
+      <div class="form-row" style="display:flex;gap:4px">
+        <input type="number" value="${m.qty}" min="1" style="width:70px" oninput="updDesiredItemQty(${i}, this.value)">
+        <button class="btn btn-danger btn-icon" tabindex="-1" onclick="rmDesiredItemRow(${i})">X</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function desiredFormHTML(d = {}) {
+  const mId = d.memberId || "";
+  const dt = d.dateAdded || new Date().toISOString().split("T")[0];
+  const nt = d.notes || "";
+  return `
+    <div class="form-grid">
+      <div class="form-row col2"><label>Miembro</label>
+        <select id="f-ds-member">
+          <option value="">Seleccionar...</option>
+          ${window.STATE.members.map(m => `<option value="${m.id}" ${m.id === mId ? "selected" : ""}>${m.nickname}</option>`).join("")}
+        </select>
+      </div>
+      <div class="form-row col2">
+        <label>Items Deseados <button class="btn btn-ghost btn-sm" style="float:right;padding:2px 6px" onclick="addDesiredItemRow()">+ Añadir Ítem</button></label>
+        <div id="desired-items-container"></div>
+      </div>
+      <div class="form-row col2"><label>Fecha de Registro</label>
+        <input type="date" id="f-ds-date" value="${dt}">
+      </div>
+      <div class="form-row col2"><label>Notas (Opcional)</label>
+        <textarea id="f-ds-notes" rows="2" placeholder="Opcional...">${nt}</textarea>
+      </div>
+    </div>
+  `;
+}
+
+function gatherDesiredData() {
+  const memberId = document.getElementById("f-ds-member").value;
+  const dateAdded = document.getElementById("f-ds-date").value;
+  const notes = document.getElementById("f-ds-notes").value.trim();
+
+  if (!memberId) { window.toast("Selecciona un miembro", "error"); return null; }
+  
+  const finalItems = [];
+  for (const it of window._desiredItems) {
+    if (it.name.trim()) finalItems.push({ name: it.name.trim(), qty: parseInt(it.qty) || 1 });
+  }
+  if (finalItems.length === 0) {
+    window.toast("Debes agregar al menos un ítem deseado", "error"); return null;
+  }
+
+  return { memberId, items: finalItems, dateAdded, notes, status: "active" };
+}
+
+window.addDesired = function () {
+  if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
+  window._desiredItems = [{ name: "", qty: 1 }];
+  window.openModal("<i class='ri-heart-add-line'></i> Registrar Ítem Deseado", desiredFormHTML(), async () => {
+    const data = gatherDesiredData(); if (!data) return false;
+    await window.saveFireDoc(`clans/${window.CLAN_ID}/desired`, null, data);
+    window.toast("Ítem deseado registrado", "success");
+  });
+  setTimeout(renderDesiredItemRows, 50);
+};
+
+window.editDesired = function (id) {
+  if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
+  const d = window.STATE.desired.find(x => x.id === id); if (!d) return;
+  window._desiredItems = (d.items && d.items.length) ? [...d.items] : [{ name: "", qty: 1 }];
+  window.openModal(`<i class='ri-edit-2-line'></i> Editar Ítem Deseado`, desiredFormHTML(d), async () => {
+    const data = gatherDesiredData(); if (!data) return false;
+    // preserve status if it was fulfilled
+    data.status = d.status;
+    await window.saveFireDoc(`clans/${window.CLAN_ID}/desired`, id, data);
+    window.toast("Actualizado", "success");
+  });
+  setTimeout(renderDesiredItemRows, 50);
+};
+
+window.delDesired = async function (id) {
+  if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
+  if (!confirm("¿Eliminar este registro?")) return;
+  await window.delFireDoc(`clans/${window.CLAN_ID}/desired`, id);
+  window.toast("Eliminado", "info");
+};
+
+window.fulfillDesired = async function (id) {
+  if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
+  if (!confirm("¿Marcar todos los ítems de esta lista como cumplidos/obtenidos?")) return;
+  await window.saveFireDoc(`clans/${window.CLAN_ID}/desired`, id, { status: "fulfilled" });
+  window.toast("Ítems marcados como cumplidos", "success");
+};

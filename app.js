@@ -27,6 +27,7 @@ let STATE = {
   crafts: [],
   treasury: [],
   loans: [],
+  desired: [],
   equipment: [],
   events: [],
   globalItems: [],
@@ -76,6 +77,13 @@ async function loadAll() {
       if (STATE.page === "equipment") window.equipment();
     });
 
+    // 🎨 ESCUCHA EN VIVO: Deseado
+    onSnapshot(collection(db, `clans/${CLAN_ID}/desired`), (snap) => {
+      STATE.desired = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      updateDesiredBadge();
+      if (STATE.page === "desired") window.desired();
+    });
+
     const [w, c, t, e, gi] = await Promise.all([
       getDocs(collection(db, `clans/${CLAN_ID}/warehouse`)),
       getDocs(collection(db, `clans/${CLAN_ID}/crafts`)),
@@ -112,6 +120,7 @@ window.fmtDate = fmtDate;
 window.memberName = memberName;
 window.memberOptions = memberOptions;
 window.updateLoansBadge = updateLoansBadge;
+window.updateDesiredBadge = updateDesiredBadge;
 window.saveFireDoc = saveDoc;
 window.delFireDoc = delDoc;
 window.openModal = openModal;
@@ -120,12 +129,12 @@ window.members = members;   // ← exponer al scope global para que funcione onc
 // ── NAV ──────────────────────────────────────────────────
 const PAGE_TITLES = {
   dashboard: "Dashboard", members: "Miembros del Clan", warehouse: "Almacén del Clan",
-  crafts: "Crafts & Materiales", treasury: "Tesorería", loans: "Préstamos & Deudas", equipment: "Equipamiento de Miembros", events: "Eventos",
+  crafts: "Crafts & Materiales", treasury: "Tesorería", loans: "Préstamos & Deudas", desired: "Items Deseados", equipment: "Equipamiento de Miembros", events: "Eventos",
   dbmanager: "Gestor L2 DB Master"
 };
 const ADD_LABELS = {
   dashboard: "", members: "Nuevo Miembro", warehouse: "Nuevo Item", crafts: "Nuevo Craft",
-  treasury: "Nueva Transacción", loans: "Nuevo Préstamo", equipment: "Añadir Equipamiento", events: "Nuevo Evento",
+  treasury: "Nueva Transacción", loans: "Nuevo Préstamo", desired: "Nuevo Deseo", equipment: "Añadir Equipamiento", events: "Nuevo Evento",
   dbmanager: "Nuevo Item L2"
 };
 
@@ -173,6 +182,7 @@ function navigate(page) {
     crafts: window.crafts,
     treasury: window.treasury,
     loans: window.loans,
+    desired: window.desired,
     equipment: window.equipment,
     events: window.events,
     dbmanager: window.dbmanager
@@ -188,6 +198,7 @@ window.handleAddClick = () => {
     crafts: window.addCraft,
     treasury: window.addTransaction,
     loans: window.addLoan,
+    desired: window.addDesired,
     equipment: window.addEquipment,
     events: window.addEvent,
     dbmanager: window.addGlobalItem
@@ -328,6 +339,11 @@ function updateLoansBadge() {
   const overdue = STATE.loans.filter(l => l.status === "active" || l.status === "overdue").length;
   const b = document.getElementById("loans-badge");
   if (b) { b.textContent = overdue; b.style.display = overdue ? "" : "none"; }
+}
+function updateDesiredBadge() {
+  const active = STATE.desired.filter(d => d.status === "active").length;
+  const b = document.getElementById("desired-badge");
+  if (b) { b.textContent = active; b.style.display = active ? "" : "none"; }
 }
 
 // ── DASHBOARD ────────────────────────────────────────
