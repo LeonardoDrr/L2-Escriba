@@ -145,7 +145,8 @@ function setupNav() {
 }
 
 function navigate(page) {
-  if (page === "dbmanager" && !STATE.isAdmin) return toast("Acceso denegado", "error");
+  const adminOnlyPages = ["dbmanager", "warehouse", "treasury", "loans", "equipment"];
+  if (adminOnlyPages.includes(page) && !STATE.isAdmin) return toast("Acceso denegado", "error");
   STATE.page = page;
   document.querySelectorAll(".nav-item").forEach(el =>
     el.classList.toggle("active", el.dataset.page === page)
@@ -169,12 +170,11 @@ function navigate(page) {
     btnLoginTxt.textContent = "Login Admin";
   }
 
-  const adminSection = document.querySelector(".admin-section");
-  const adminItem = document.querySelector(".admin-item");
-  if (adminSection && adminItem) {
-    adminSection.style.display = STATE.isAdmin ? "block" : "none";
-    adminItem.style.display = STATE.isAdmin ? "flex" : "none";
-  }
+  const adminSections = document.querySelectorAll(".admin-section");
+  adminSections.forEach(el => el.style.display = STATE.isAdmin ? "block" : "none");
+
+  const adminItems = document.querySelectorAll(".admin-item");
+  adminItems.forEach(el => el.style.display = STATE.isAdmin ? "flex" : "none");
 
   const renders = {
     dashboard, members,
@@ -392,6 +392,7 @@ function dashboard() {
         <div class="stat-icon"><i class="ri-group-line"></i></div><div class="stat-label">Miembros Activos</div>
         <div class="stat-value">${activeMembers}</div><div class="stat-sub">${STATE.members.length} total</div>
       </div>
+      ${STATE.isAdmin ? `
       <div class="stat-card" onclick="window.navigate('warehouse')" style="cursor:pointer">
         <div class="stat-icon"><i class="ri-archive-2-line"></i></div><div class="stat-label">Items en Almacén</div>
         <div class="stat-value">${totalItems}</div>
@@ -405,6 +406,7 @@ function dashboard() {
         <div class="stat-value" style="font-size:1.1rem;${balance < 0 ? 'color:var(--red)' : ''}">${fmt(balance)}</div>
         <div class="stat-sub">Adena</div>
       </div>
+      ` : ''}
       <div class="stat-card" onclick="window.navigate('crafts')" style="cursor:pointer">
         <div class="stat-icon"><i class="ri-hammer-line"></i></div><div class="stat-label">Crafts en Progreso</div>
         <div class="stat-value">${activeCrafts}</div>
@@ -413,10 +415,12 @@ function dashboard() {
         <div class="stat-icon"><i class="ri-calendar-event-line"></i></div><div class="stat-label">Eventos</div>
         <div class="stat-value">${totalEvents}</div>
       </div>
+      ${STATE.isAdmin ? `
       <div class="stat-card" onclick="window.navigate('equipment')" style="cursor:pointer; display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:80px">
         <div class="stat-icon" style="margin-bottom:8px"><i class="ri-shield-user-line" style="font-size:2rem"></i></div>
         <div class="stat-label" style="font-size:1.1rem; font-weight:600; text-align:center">Equipamiento</div>
       </div>
+      ` : ''}
     </div>
     ${alerts ? `<div style="margin-bottom:16px">${alerts}</div>` : ""}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
