@@ -251,6 +251,14 @@ window.acSelect = (inputId, listId, name) => {
       window.updDesiredItemName(idx, name);
     }
   }
+
+  // Si es un ítem de equipamiento (multi-add), actualizamos _equipmentItems
+  if (inputId.startsWith('eq-it-')) {
+    const idx = parseInt(inputId.replace('eq-it-', ''));
+    if (!isNaN(idx) && window.updEquipmentItemName) {
+      window.updEquipmentItemName(idx, name);
+    }
+  }
 };
 
 // Autocomplete especial para Crafts — auto-rellena materiales si hay receta
@@ -1747,6 +1755,56 @@ window.equipment = function () {
     </table></div>`;
 };
 
+// ── MULTI-ITEM EQUIPMENT ADD ─────────────────────────────
+window._equipmentItems = [];
+window.addEquipmentItemRow = () => { window._equipmentItems.push({ name: "" }); renderEquipmentItemRows(); };
+window.rmEquipmentItemRow = (idx) => { window._equipmentItems.splice(idx, 1); renderEquipmentItemRows(); };
+window.updEquipmentItemName = (idx, val) => { if (window._equipmentItems[idx] !== undefined) window._equipmentItems[idx].name = val; };
+
+function renderEquipmentItemRows() {
+  const c = document.getElementById("equipment-items-container");
+  if (!c) return;
+  c.innerHTML = window._equipmentItems.map((m, i) => `
+    <div class="ev-member-row" id="eq-item-row-${i}" style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+      <div class="autocomplete-wrap" style="flex:1">
+        <input type="text" id="eq-it-${i}" value="${m.name}" placeholder="Buscar item L2..."
+          oninput="updEquipmentItemName(${i}, this.value); acSearch(this.value, 'eq-it-${i}', 'ac-eq-it-${i}')" autocomplete="off">
+        <div class="autocomplete-list" id="ac-eq-it-${i}"></div>
+      </div>
+      <button class="btn btn-danger btn-icon btn-sm" tabindex="-1" onclick="rmEquipmentItemRow(${i})"><i class="ri-close-line"></i></button>
+    </div>`).join("");
+}
+
+function equipmentAddFormHTML() {
+  const dt = new Date().toISOString().split("T")[0];
+  return `
+    <div class="form-grid">
+      <div class="form-row"><label>Miembro</label>
+        <select id="f-eq-member">
+          <option value="">Seleccionar...</option>
+          ${window.STATE.members.map(m => `<option value="${m.id}">${m.nickname}</option>`).join("")}
+        </select>
+      </div>
+      <div class="form-row"><label>Estado</label>
+        <select id="f-eq-status">
+          <option value="propio">Propio</option>
+          <option value="prestamo">Préstamo</option>
+        </select>
+      </div>
+      <div class="form-row col2">
+        <label>Items Equipados <button class="btn btn-ghost btn-sm" style="float:right;padding:2px 6px" onclick="addEquipmentItemRow()">+ Añadir Ítem</button></label>
+        <div id="equipment-items-container"></div>
+      </div>
+      <div class="form-row col2"><label>Fecha de Registro</label>
+        <input type="date" id="f-eq-date" value="${dt}">
+      </div>
+      <div class="form-row col2"><label>Notas / Condiciones</label>
+        <textarea id="f-eq-notes" rows="2" placeholder="Opcional..."></textarea>
+      </div>
+    </div>
+  `;
+}
+
 function equipmentFormHTML(e = {}) {
   const mId = e.memberId || "";
   const iName = e.itemName || "";
@@ -1783,38 +1841,41 @@ function equipmentFormHTML(e = {}) {
     </div>
   `;
 }
- 
-function gatherEquipmentData() {
+
+function gatherEquipmentBaseData() {
   const memberId = document.getElementById("f-eq-member").value;
   const status = document.getElementById("f-eq-status").value;
-  // Make sure not to crash via uninitialized DOM
-  const itemEl = document.getElementById("f-eq-item");
-  const itemName = itemEl ? itemEl.value.trim() : "";
   const date = document.getElementById("f-eq-date").value;
   const notes = document.getElementById("f-eq-notes").value.trim();
-
   if (!memberId) { window.toast("Selecciona un miembro", "error"); return null; }
-  if (!itemName) { window.toast("Escribe el nombre del item", "error"); return null; }
-
-  return { memberId, status, itemName, date, notes };
+  return { memberId, status, date, notes };
 }
 
 window.addEquipment = function () {
   if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
   if (!window.STATE.members.length) { window.toast("Agrega miembros primero", "error"); return; }
-  window.openModal("<i class='ri-shield-user-line'></i> Otorgar Equipamiento", equipmentFormHTML(), async () => {
-    const data = gatherEquipmentData(); if (!data) return false;
-    await window.saveFireDoc(`clans/${window.CLAN_ID}/equipment`, null, data);
-    window.toast("Equipamiento registrado", "success");
+  window._equipmentItems = [{ name: "" }];
+  window.openModal("<i class='ri-shield-user-line'></i> Otorgar Equipamiento", equipmentAddFormHTML(), async () => {
+    const base = gatherEquipmentBaseData(); if (!base) return false;
+    const itemNames = window._equipmentItems.map(it => it.name.trim()).filter(n => n);
+    if (!itemNames.length) { window.toast("Agrega al menos un ítem", "error"); return false; }
+    for (const itemName of itemNames) {
+      await window.saveFireDoc(`clans/${window.CLAN_ID}/equipment`, null, { ...base, itemName });
+    }
+    window.toast(`${itemNames.length} item(s) de equipamiento registrado(s)`, "success");
   });
+  setTimeout(renderEquipmentItemRows, 50);
 };
 
 window.editEquipment = function (id) {
   if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
   const e = window.STATE.equipment.find(x => x.id === id); if (!e) return;
   window.openModal(`<i class='ri-edit-2-line'></i> Editar Equipamiento`, equipmentFormHTML(e), async () => {
-    const data = gatherEquipmentData(); if (!data) return false;
-    await window.saveFireDoc(`clans/${window.CLAN_ID}/equipment`, id, data);
+    const base = gatherEquipmentBaseData(); if (!base) return false;
+    const itemEl = document.getElementById("f-eq-item");
+    const itemName = itemEl ? itemEl.value.trim() : "";
+    if (!itemName) { window.toast("Escribe el nombre del item", "error"); return false; }
+    await window.saveFireDoc(`clans/${window.CLAN_ID}/equipment`, id, { ...base, itemName });
     window.toast("Equipamiento actualizado", "success");
   });
 };
