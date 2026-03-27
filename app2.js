@@ -243,6 +243,14 @@ window.acSelect = (inputId, listId, name) => {
       window.updLoanItemName(idx, name);
     }
   }
+
+  // Si es un ítem deseado, actualizamos el array _desiredItems para que guarde el nombre completo
+  if (inputId.startsWith('ds-it-')) {
+    const idx = parseInt(inputId.replace('ds-it-', ''));
+    if (!isNaN(idx) && window.updDesiredItemName) {
+      window.updDesiredItemName(idx, name);
+    }
+  }
 };
 
 // Autocomplete especial para Crafts — auto-rellena materiales si hay receta
