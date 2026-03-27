@@ -1707,6 +1707,12 @@ window.equipment = function () {
     if (fs && e.status !== fs) return false;
     if (fm && e.memberId !== fm) return false;
     return true;
+  }).sort((a, b) => {
+    const nameA = window.memberName(a.memberId).toLowerCase();
+    const nameB = window.memberName(b.memberId).toLowerCase();
+    if (nameA < nameB) return -1;
+    if (nameA > nameB) return 1;
+    return 0;
   });
 
   const stBadge = s => ({
