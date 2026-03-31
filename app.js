@@ -59,9 +59,10 @@ async function loadAll() {
   try {
     // 🎨 ESCUCHA EN VIVO: Miembros
     onSnapshot(collection(db, `clans/${CLAN_ID}/members`), (snap) => {
-      STATE.members = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      STATE.members = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.nickname || "").localeCompare(b.nickname || ""));
       // Si estamos en la página de miembros, repintar
       if (STATE.page === "members") window.members();
+      if (STATE.page === "member-details") window.showMemberDetails();
     });
 
     // 🎨 ESCUCHA EN VIVO: Préstamos
@@ -69,12 +70,14 @@ async function loadAll() {
       STATE.loans = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       updateLoansBadge();
       if (STATE.page === "loans") window.loans();
+      if (STATE.page === "member-details") window.showMemberDetails();
     });
 
     // 🎨 ESCUCHA EN VIVO: Equipamiento
     onSnapshot(collection(db, `clans/${CLAN_ID}/equipment`), (snap) => {
       STATE.equipment = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       if (STATE.page === "equipment") window.equipment();
+      if (STATE.page === "member-details") window.showMemberDetails();
     });
 
     // 🎨 ESCUCHA EN VIVO: Deseado
@@ -82,6 +85,7 @@ async function loadAll() {
       STATE.desired = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       updateDesiredBadge();
       if (STATE.page === "desired") window.desired();
+      if (STATE.page === "member-details") window.showMemberDetails();
     });
 
     const [w, c, t, e, gi] = await Promise.all([
@@ -130,7 +134,7 @@ window.members = members;   // ← exponer al scope global para que funcione onc
 const PAGE_TITLES = {
   dashboard: "Dashboard", members: "Miembros del Clan", warehouse: "Almacén del Clan",
   crafts: "Crafts & Materiales", treasury: "Tesorería", loans: "Préstamos & Deudas", desired: "Items Deseados", equipment: "Equipamiento de Miembros", events: "Eventos",
-  dbmanager: "Gestor L2 DB Master"
+  dbmanager: "Gestor L2 DB Master", "member-details": "Perfil del Miembro"
 };
 const ADD_LABELS = {
   dashboard: "", members: "Nuevo Miembro", warehouse: "Nuevo Item", crafts: "Nuevo Craft",
@@ -185,7 +189,8 @@ function navigate(page) {
     desired: window.desired,
     equipment: window.equipment,
     events: window.events,
-    dbmanager: window.dbmanager
+    dbmanager: window.dbmanager,
+    'member-details': window.showMemberDetails
   };
   (renders[page] || (() => { }))();
 }
@@ -597,9 +602,8 @@ function members() {
     return true;
   });
 
-  // 2. Ordenar por jerarquía
-  const roleOrder = { leader: 0, escriba: 1, guardian: 2, member: 3 };
-  list.sort((a, b) => (roleOrder[a.clanRole] ?? 99) - (roleOrder[b.clanRole] ?? 99));
+  // 2. Ordenar alfabéticamente
+  list.sort((a, b) => (a.nickname || "").localeCompare(b.nickname || ""));
 
   const statusBadge = s => ({
     active: "<span class='badge badge-green'>Activo</span>",
@@ -653,9 +657,10 @@ function members() {
       <td style="vertical-align:top;padding-top:14px">${fmtDate(m.joinDate)}</td>
       <td style="vertical-align:top;padding-top:10px">
         ${window.STATE.isAdmin ? `
-        <button class="btn btn-ghost btn-icon btn-sm" onclick="editMember('${m.id}')"><i class="ri-edit-line"></i></button>
-        <button class="btn btn-danger btn-icon btn-sm" onclick="delMember('${m.id}')"><i class="ri-delete-bin-line"></i></button>
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="editMember('${m.id}')" title="Editar Miembro"><i class="ri-edit-line"></i></button>
+        <button class="btn btn-danger btn-icon btn-sm" onclick="delMember('${m.id}')" title="Eliminar Miembro"><i class="ri-delete-bin-line"></i></button>
         ` : ''}
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="showMemberDetails('${m.id}')" title="Más Información del Miembro"><i class="ri-article-line"></i></button>
       </td>
     </tr>`;
   }).join("") || `<tr><td colspan="7"><div class="empty-state"><i class="ri-group-line"></i><p>No hay miembros registrados</p></div></td></tr>`;
@@ -827,6 +832,168 @@ window.delMember = async (id) => {
   if (!confirm("¿Eliminar este miembro?")) return;
   await delDoc(`clans/${CLAN_ID}/members`, id);
   toast("Miembro eliminado", "info");
+};
+
+// ── MEMBER DETAILS DASHBOARD ─────────────────────────────
+window._currentMemberDetailsId = null;
+
+window.showMemberDetails = function (id) {
+  if (id) window._currentMemberDetailsId = id;
+  else id = window._currentMemberDetailsId;
+  
+  if (!id) {
+    window.navigate('members');
+    return;
+  }
+  
+  window.STATE.page = "member-details";
+  const btn = document.getElementById("btn-add");
+  if (btn) btn.style.display = "none"; // Hide general add button
+  
+  const m = window.STATE.members.find(x => x.id === id);
+  if (!m) {
+    window.navigate('members');
+    return;
+  }
+
+  // Calculos
+  // 1. Equipamiento
+  const eq = window.STATE.equipment.filter(e => e.memberId === id);
+  // 2. Deseados
+  const ds = window.STATE.desired.filter(d => d.memberId === id);
+  // 3. Eventos y Puntos
+  const evs = window.STATE.events.filter(e => (e.participants || []).some(p => p.memberId === id));
+  const totalPts = evs.reduce((sum, e) => {
+    const p = e.participants.find(x => x.memberId === id);
+    return sum + (p ? +p.points : 0);
+  }, 0);
+  // 4. Préstamos (donde sea destino o origen)
+  const ln = window.STATE.loans.filter(l => l.fromId === id || l.toId === id);
+
+  const nobleBadge = m.isNoble ? `<span class="badge badge-gold"><i class="ri-vip-diamond-fill"></i> Noble</span>` : "";
+  const roleBadge = m.clanRole === "leader" ? "Líder" : m.clanRole === "guardian" ? "Guardián" : m.clanRole === "escriba" ? "Escriba" : "Miembro";
+  
+  const subsHtml = (m.subclasses || []).filter(s => s.class && s.level).map(s => 
+    `<span style="margin-right:6px;font-size:0.8rem;color:var(--text3);background:var(--bg3);padding:2px 6px;border-radius:4px;white-space:nowrap;display:inline-block;margin-top:4px;">↪ ${s.class} <b style="color:var(--gold-light)">(${s.level})</b></span>`
+  ).join("");
+
+  document.getElementById("content").innerHTML = `
+    <div style="margin-bottom:16px;">
+      <button class="btn btn-ghost btn-sm" onclick="window.navigate('members')" style="gap:6px"><i class="ri-arrow-left-line"></i> Volver a Miembros</button>
+    </div>
+    
+    <div class="card" style="margin-bottom:20px; display:flex; align-items:center; gap:20px;">
+      <div style="font-size:3rem; color:var(--text3);"><i class="ri-user-smile-line"></i></div>
+      <div style="flex:1">
+        <h2 style="margin:0; margin-bottom:4px; display:flex; align-items:center; gap:10px;">
+          ${m.nickname} 
+          <span class="badge badge-gray" style="font-size:0.75rem">Lv. ${m.level}</span>
+          ${m.status === 'active' ? `<span class="badge badge-green">Activo</span>` : m.status === 'inactive' ? `<span class="badge badge-gray">Inactivo</span>` : `<span class="badge badge-gold">Ausente</span>`}
+          ${nobleBadge}
+        </h2>
+        <div style="color:var(--text2); font-size:0.95rem;">
+          <span style="color:var(--gold)">${m.class}</span> — ${roleBadge}
+        </div>
+        <div>${subsHtml}</div>
+      </div>
+    </div>
+    
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+      
+      <!-- EQUIPAMIENTO -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">
+          <b style="color:var(--gold-light)"><i class="ri-shield-user-line"></i> Equipamiento</b>
+          ${window.STATE.isAdmin ? `<button class="btn btn-ghost btn-sm" onclick="addEquipmentFor('${m.id}')" title="Añadir Equipamiento" style="padding:2px 8px; border:1px solid var(--border)">+</button>` : ''}
+        </div>
+        ${eq.length ? eq.map(e => `
+          <div style="padding:6px 0; border-bottom:1px dashed var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <span>${e.itemName}</span>
+            <span class="badge ${e.status === 'propio' ? 'badge-green' : 'badge-blue'}" style="font-size:0.7rem">${e.status === 'propio' ? 'Propio' : 'Préstamo'}</span>
+          </div>
+        `).join("") : `<div class="empty-state" style="padding:20px 0"><p>Sin equipamiento</p></div>`}
+      </div>
+
+      <!-- DESEADOS -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">
+          <b style="color:var(--gold-light)"><i class="ri-heart-add-line"></i> Ítems Deseados</b>
+          ${window.STATE.isAdmin ? `<button class="btn btn-ghost btn-sm" onclick="addDesiredFor('${m.id}')" title="Añadir Ítem Deseado" style="padding:2px 8px; border:1px solid var(--border)">+</button>` : ''}
+        </div>
+        ${ds.length ? ds.map(d => `
+          <div style="padding:6px 0; border-bottom:1px dashed var(--border);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:${d.status === 'fulfilled' ? 'var(--green)' : 'var(--text)'}">${(d.items || []).map(i=>i.name).join(", ")}</span>
+              <span class="badge ${d.status === 'fulfilled' ? 'badge-green' : 'badge-blue'}" style="font-size:0.7rem">${d.status === 'fulfilled' ? 'Cumplido' : 'Pendiente'}</span>
+            </div>
+          </div>
+        `).join("") : `<div class="empty-state" style="padding:20px 0"><p>Sin ítems deseados</p></div>`}
+      </div>
+
+      <!-- EVENTOS -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">
+          <b style="color:var(--gold-light)"><i class="ri-calendar-event-line"></i> Eventos Recientes</b>
+          <span class="badge badge-purple" style="font-size:0.85rem">Total: ${window.fmt(totalPts)} <small>pts</small></span>
+        </div>
+        ${evs.length ? evs.slice(-5).reverse().map(e => {
+          const pt = e.participants.find(x => x.memberId === m.id).points;
+          return `<div style="padding:6px 0; border-bottom:1px dashed var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:var(--text2); font-size:0.85rem">${e.date ? window.fmtDate(e.date) : ''}</span>
+            <span style="flex:1; margin-left:10px">${e.name}</span>
+            <b style="color:var(--gold-light)">+${pt}</b>
+          </div>`;
+        }).join("") : `<div class="empty-state" style="padding:20px 0"><p>Sin asistencia a eventos</p></div>`}
+      </div>
+
+      <!-- PRESTAMOS / DEUDAS -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">
+          <b style="color:var(--gold-light)"><i class="ri-hand-coin-line"></i> Préstamos y Deudas</b>
+          ${window.STATE.isAdmin ? `<button class="btn btn-ghost btn-sm" onclick="addLoanFor('${m.id}')" title="Nuevo Préstamo a este miembro" style="padding:2px 8px; border:1px solid var(--border)">+</button>` : ''}
+        </div>
+        ${ln.length ? ln.map(l => {
+          const isDebtor = l.toId === m.id;
+          const other = isDebtor ? window.memberName(l.fromId) : window.memberName(l.toId);
+          const verb = isDebtor ? "Recibió de" : "Prestó a";
+          const color = l.status === 'active' || l.status === 'overdue' ? (isDebtor ? 'var(--red)' : 'var(--green)') : 'var(--text3)';
+          const label = l.itemName ? l.itemName : (l.amount + " Adena");
+          return `<div style="padding:6px 0; border-bottom:1px dashed var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:0.9rem">${verb} <b>${other}</b></span>
+            <div style="text-align:right">
+               <div style="color:${color}; font-weight:bold; font-size:0.9rem">${label}</div>
+               <div style="font-size:0.7rem; color:var(--text3); text-transform:uppercase">${l.status}</div>
+            </div>
+          </div>`;
+        }).join("") : `<div class="empty-state" style="padding:20px 0"><p>Sin préstamos ni deudas</p></div>`}
+      </div>
+
+    </div>
+  `;
+};
+
+window.addEquipmentFor = (id) => {
+  if(window.addEquipment) window.addEquipment();
+  setTimeout(() => {
+    const s = document.getElementById("f-eq-member");
+    if(s) { s.value = id; s.disabled = true; }
+  }, 50);
+};
+
+window.addDesiredFor = (id) => {
+  if(window.addDesired) window.addDesired();
+  setTimeout(() => {
+    const s = document.getElementById("f-ds-member");
+    if(s) { s.value = id; s.disabled = true; }
+  }, 50);
+};
+
+window.addLoanFor = (id) => {
+  if(window.addLoan) window.addLoan();
+  setTimeout(() => {
+    const s = document.getElementById("f-lto");
+    if(s) { s.value = id; s.disabled = true; }
+  }, 50);
 };
 
 // ── IMPORT ADDITIONAL MODULES ────────────────────────────
