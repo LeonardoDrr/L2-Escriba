@@ -889,6 +889,293 @@
         body {
             top: 0px !important;
         }
+
+        /* ── CRAFT DETAIL / TREE STYLES ── */
+        .craft-detail-header {
+            background: linear-gradient(135deg, rgba(212,160,23,.12), rgba(155,89,182,.08));
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .craft-detail-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.3rem;
+            color: var(--gold-light);
+            flex: 1;
+        }
+        .craft-detail-subtitle {
+            font-size: .78rem;
+            color: var(--text3);
+            margin-top: 3px;
+        }
+        /* Multiplier bar */
+        .mult-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 10px;
+        }
+        .mult-bar label {
+            font-size: .7rem;
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            white-space: nowrap;
+        }
+        .mult-btn {
+            padding: 5px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg2);
+            color: var(--text2);
+            font-size: .8rem;
+            cursor: pointer;
+            transition: all .2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .mult-btn:hover, .mult-btn.active {
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            border-color: var(--gold);
+            color: #000;
+            font-weight: 600;
+        }
+        .mult-input {
+            width: 60px;
+            padding: 5px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg3);
+            color: var(--gold-light);
+            font-size: .85rem;
+            text-align: center;
+            outline: none;
+        }
+        .mult-input:focus { border-color: var(--gold-dark); }
+
+        /* Craft tree */
+        .craft-sections-grid {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 20px;
+            align-items: start;
+        }
+        @media(max-width:900px){
+            .craft-sections-grid { grid-template-columns: 1fr; }
+        }
+        .craft-tree-wrap {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 18px;
+        }
+        .craft-tree-title {
+            font-family: 'Cinzel', serif;
+            font-size: .9rem;
+            color: var(--gold);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        /* Node styles */
+        .ct-node {
+            position: relative;
+        }
+        .ct-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg3);
+            margin-bottom: 4px;
+            transition: border-color .2s, background .2s;
+            cursor: default;
+        }
+        .ct-node-header.has-children {
+            cursor: pointer;
+        }
+        .ct-node-header.has-children:hover {
+            border-color: var(--gold-dark);
+            background: var(--card-hover);
+        }
+        .ct-node-header.root-node {
+            border-color: var(--gold-dark);
+            background: rgba(212,160,23,.08);
+        }
+        .ct-node-header.sub-node {
+            border-color: rgba(74,144,217,.3);
+            background: rgba(74,144,217,.05);
+        }
+        .ct-node-header.base-node {
+            border-color: rgba(46,204,113,.25);
+            background: rgba(46,204,113,.04);
+        }
+        .ct-node-header.missing-node {
+            border-color: rgba(224,53,53,.35);
+            background: rgba(224,53,53,.06);
+        }
+        .ct-toggle-icon {
+            font-size: .85rem;
+            color: var(--text3);
+            min-width: 14px;
+            transition: transform .2s;
+        }
+        .ct-toggle-icon.open { transform: rotate(90deg); }
+        .ct-item-name {
+            font-weight: 600;
+            font-size: .84rem;
+            flex: 1;
+        }
+        .ct-qty {
+            font-size: .82rem;
+            font-weight: 700;
+            color: var(--gold-light);
+            white-space: nowrap;
+        }
+        .ct-wh-info {
+            font-size: .72rem;
+            color: var(--text3);
+            white-space: nowrap;
+        }
+        .ct-why {
+            font-size: .7rem;
+            color: var(--text3);
+            font-style: italic;
+            margin-left: 4px;
+        }
+        /* Connector lines */
+        .ct-children {
+            margin-left: 24px;
+            padding-left: 12px;
+            border-left: 2px solid rgba(42,38,80,.8);
+            margin-top: 0;
+            display: none;
+        }
+        .ct-children.open {
+            display: block;
+        }
+        .ct-child-wrap {
+            position: relative;
+            padding-top: 4px;
+        }
+        .ct-child-wrap::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 17px;
+            width: 12px;
+            height: 2px;
+            background: rgba(42,38,80,.8);
+        }
+        /* Flow path breadcrumb */
+        .ct-path {
+            font-size: .68rem;
+            color: var(--text3);
+            padding: 3px 8px;
+            background: var(--bg2);
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 4px;
+            flex-wrap: wrap;
+        }
+        .ct-path-arrow {
+            color: var(--gold-dark);
+            font-size: .7rem;
+        }
+        /* Summary panel */
+        .craft-summary-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .summary-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+        }
+        .summary-card-title {
+            font-family: 'Cinzel', serif;
+            font-size: .82rem;
+            color: var(--gold);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .summary-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 0;
+            border-bottom: 1px solid rgba(42,38,80,.4);
+            font-size: .8rem;
+            gap: 8px;
+        }
+        .summary-row:last-child { border-bottom: none; }
+        .summary-mat-name {
+            flex: 1;
+            color: var(--text);
+        }
+        .summary-needed {
+            color: var(--gold-light);
+            font-weight: 700;
+            min-width: 48px;
+            text-align: right;
+        }
+        .summary-have {
+            font-size: .72rem;
+            color: var(--text3);
+            min-width: 70px;
+            text-align: right;
+        }
+        .summary-have.ok { color: var(--green); }
+        .summary-have.short { color: var(--red); }
+        .source-badge {
+            font-size: .65rem;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .source-drop { background: rgba(224,53,53,.15); color: var(--red); border: 1px solid rgba(224,53,53,.3); }
+        .source-craft { background: rgba(212,160,23,.12); color: var(--gold); border: 1px solid rgba(212,160,23,.25); }
+        .source-shop { background: rgba(74,144,217,.12); color: var(--blue); border: 1px solid rgba(74,144,217,.25); }
+        /* Notes */
+        .notes-area {
+            width: 100%;
+            min-height: 90px;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg3);
+            color: var(--text);
+            font-size: .82rem;
+            font-family: 'Inter', sans-serif;
+            resize: vertical;
+            outline: none;
+            transition: border-color .2s;
+        }
+        .notes-area:focus { border-color: var(--gold-dark); }
+        /* Back button area */
+        .craft-back-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
     </style>
 </head>
 
@@ -1016,6 +1303,10 @@
         function delWH(id) { if (window.delWH) window.delWH(id); }
         function editCraft(id) { if (window.editCraft) window.editCraft(id); }
         function delCraft(id) { if (window.delCraft) window.delCraft(id); }
+        function viewCraftDetail(id, mult) { if (window.viewCraftDetail) window.viewCraftDetail(id, mult || 1); }
+        function setCraftMult(id, m) { if (window.setCraftMult) window.setCraftMult(id, m); }
+        function saveCraftNotes(id) { if (window.saveCraftNotes) window.saveCraftNotes(id); }
+        function ctToggle(nodeId) { if (window.ctToggle) window.ctToggle(nodeId); }
         function delTx(id) { if (window.delTx) window.delTx(id); }
         function editLoan(id) { if (window.editLoan) window.editLoan(id); }
         function delLoan(id) { if (window.delLoan) window.delLoan(id); }

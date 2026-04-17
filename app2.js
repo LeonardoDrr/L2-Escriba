@@ -1,4 +1,4 @@
-import { searchItems, CATEGORY_LABELS } from "./items-db.js?v=6";
+﻿import { searchItems, CATEGORY_LABELS } from "./items-db.js?v=6";
 import { getRecipeFor, isNonCraftable, evaluateCraftTree } from "./crafts-recipes.js?v=6";
 
 
@@ -349,95 +349,46 @@ window.crafts = function () {
 
   const cards = list.map(c => {
     const mats = c.materials || [];
-
-    let totalNeeded = 0;
-    let totalCollected = 0;
-
-    // We pre-calculate totals based on real warehouse stocks, bounded to what is needed per material.
+    let totalNeeded = 0, totalCollected = 0;
     mats.forEach(m => {
-      const whEntries = (window.STATE.warehouse || []).filter(i => i.name.toLowerCase() === m.name.toLowerCase());
-      const whAmt = whEntries.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+      const whAmt = (window.STATE.warehouse || []).filter(i => i.name.toLowerCase() === m.name.toLowerCase()).reduce((s, i) => s + Number(i.quantity || 0), 0);
       totalNeeded += Number(m.needed || 0);
       totalCollected += Math.min(Number(m.needed || 0), whAmt);
     });
-
     const pct = totalNeeded ? Math.min(100, Math.round(totalCollected / totalNeeded * 100)) : 0;
+    const pctColor = pct >= 100 ? 'var(--green)' : pct >= 50 ? 'var(--gold)' : 'var(--red)';
 
-    return `<div class="card" style="margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <div style="flex:1"><b style="color:var(--gold-light)">${c.targetItem}</b>
-          <span style="color:var(--text3);font-size:.75rem;margin-left:8px">Crafter: ${window.memberName(c.crafterId) || "N/A"}</span>
+    return `<div class="card" style="margin-bottom:12px;cursor:pointer;transition:border-color .2s,transform .15s;"
+        onmouseenter="this.style.borderColor='var(--gold-dark)';this.style.transform='translateY(-1px)'"
+        onmouseleave="this.style.borderColor='';this.style.transform=''"
+        onclick="viewCraftDetail('${c.id}', 1)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px">
+            <i class="ri-hammer-line" style="color:var(--gold-dark)"></i>
+            <b style="color:var(--gold-light);font-size:.95rem">${c.targetItem}</b>
+          </div>
+          <div style="color:var(--text3);font-size:.73rem;margin-top:3px">
+            <i class="ri-user-line"></i> Crafter: ${window.memberName(c.crafterId) || "Sin asignar"}
+            &nbsp;·&nbsp;
+            <i class="ri-list-check-2"></i> ${mats.length} material(es)
+            ${c.deadline ? `&nbsp;·&nbsp; 📅 ${c.deadline}` : ""}
+          </div>
         </div>
-        ${stBadge[c.status] || c.status}
-        <button class="btn btn-ghost btn-icon btn-sm" onclick="editCraft('${c.id}')"><i class="ri-edit-line"></i></button>
-        <button class="btn btn-danger btn-icon btn-sm" onclick="delCraft('${c.id}')"><i class="ri-delete-bin-line"></i></button>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          ${stBadge[c.status] || c.status}
+          <div style="font-size:.72rem;font-weight:700;color:${pctColor}">${pct}%</div>
+        </div>
+        <div onclick="event.stopPropagation()" style="display:flex;gap:4px">
+          ${window.STATE.isAdmin ? `
+          <button class="btn btn-ghost btn-icon btn-sm" onclick="editCraft('${c.id}')" title="Editar"><i class="ri-edit-line"></i></button>
+          <button class="btn btn-danger btn-icon btn-sm" onclick="delCraft('${c.id}')" title="Eliminar"><i class="ri-delete-bin-line"></i></button>` : ''}
+        </div>
       </div>
-      <div class="progress-bar" style="margin-bottom:6px"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <div style="font-size:.72rem;color:var(--text3);margin-bottom:10px">${pct}% — ${totalCollected}/${totalNeeded} unidades en Almacén</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px">
-        ${mats.map((m, idx) => {
-      const whEntries = (window.STATE.warehouse || []).filter(i => i.name.toLowerCase() === m.name.toLowerCase());
-      const totalWHAmt = whEntries.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
-      const isComplete = totalWHAmt >= m.needed;
-      const missing = Math.max(0, m.needed - totalWHAmt);
-
-      let evaluationHTML = "";
-
-      if (missing > 0 && c.status === "active") {
-        // Evaluate based on FULL needed amount to properly calculate deficits across the entire item
-        const evalResult = evaluateCraftTree(m.name, m.needed, window.STATE.warehouse || []);
-
-        if (evalResult.status === 'ready') {
-          // Fallback just in case
-        } else if (evalResult.status === 'craftable_base') {
-          const baseList = evalResult.availableMaterials.map(mat => {
-            // Find total existing in warehouse for this specific base material to show "Total/Needed"
-            const whEntriesReq = (window.STATE.warehouse || []).filter(i => i.name.toLowerCase() === mat.name.toLowerCase());
-            const whTotalReq = whEntriesReq.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
-            return `• ${mat.name} x${whTotalReq} / ${mat.qty}`;
-          }).join("<br>");
-
-          evaluationHTML = `
-                <div style="margin-top:8px;font-size:0.7rem;color:var(--gold-light);display:flex;flex-direction:column;gap:4px">
-                  <div style="display:flex;align-items:center;gap:4px"><i class="ri-hammer-fill"></i> Crafteable con materiales base:</div>
-                  <div style="padding-left:14px;opacity:0.9;color:var(--text3)">${baseList}</div>
-                </div>
-              `;
-        } else {
-          // Missing Base Materials
-          const missingList = evalResult.missingMaterials.map(mat => `• Falta ${mat.qty}x ${mat.name}`).join("<br>");
-          evaluationHTML = `
-                <div style="margin-top:8px;font-size:0.7rem;color:var(--red);display:flex;flex-direction:column;gap:4px">
-                  <div style="display:flex;align-items:center;gap:4px"><i class="ri-error-warning-line"></i> Faltan Materiales Base:</div>
-                  <div style="padding-left:14px;opacity:0.9">${missingList}</div>
-                </div>
-              `;
-        }
-      } else if (isComplete) {
-        evaluationHTML = `
-                <div style="margin-top:8px;font-size:0.7rem;color:var(--green);display:flex;align-items:center;gap:4px">
-                  <i class="ri-checkbox-circle-fill"></i> Listo en Almacén
-                </div>
-              `;
-      }
-
-      return `
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:.78rem;display:flex;flex-direction:column">
-            <div style="font-weight:600">${m.name}</div>
-            <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
-              <div style="font-size:.85rem; font-weight:bold; color: ${isComplete ? 'var(--green)' : 'var(--text)'};">${totalWHAmt}</div>
-              <span style="color:var(--text3)">/ ${m.needed}</span>
-              <div class="progress-bar" style="flex:1;height:5px">
-                <div class="progress-fill" style="width:${m.needed ? Math.min(100, Math.round(totalWHAmt / m.needed * 100)) : 0}%; background: ${isComplete ? 'var(--green)' : 'var(--primary)'}"></div>
-              </div>
-            </div>
-            ${evaluationHTML}
-          </div>`;
-    }).join("")}
-      </div>
-      ${c.deadline ? `<div style="font-size:.72rem;color:var(--text3);margin-top:8px">📅 ${c.deadline}</div>` : ""}
+      <div class="progress-bar" style="margin-bottom:5px"><div class="progress-fill" style="width:${pct}%;background:${pctColor}"></div></div>
+      <div style="font-size:.7rem;color:var(--text3)">${totalCollected}/${totalNeeded} unidades reunidas · Haz clic para ver el árbol de crafteo detallado</div>
     </div>`;
-  }).join("") || `<div class="empty-state"><i class="ri-hammer-line"></i><p>No hay crafts registrados</p></div>`;
+  }).join("") || `<div class="empty-state"><i class="ri-hammer-line"></i><p>No hay crafts registrados. Crea uno con el botón + Nuevo.</p></div>`;
 
   document.getElementById("content").innerHTML = `
     <div class="filters">
@@ -446,7 +397,321 @@ window.crafts = function () {
         <option value="">Todos</option><option value="active">En Progreso</option>
         <option value="completed">Completado</option><option value="cancelled">Cancelado</option>
       </select>
-    </div>${cards}`;
+      <span style="margin-left:auto;color:var(--text3);font-size:.8rem">${list.length} craft(s)</span>
+    </div>
+    <div style="margin-bottom:12px;font-size:.78rem;color:var(--text3);display:flex;align-items:center;gap:6px">
+      <i class="ri-information-line" style="color:var(--gold-dark)"></i>
+      Haz clic en una tarjeta para ver el árbol de crafteo detallado con explicaciones y multiplicadores.
+    </div>
+    ${cards}`;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CRAFT DETAIL — Vista completa con árbol, multiplicador y notas
+// ─────────────────────────────────────────────────────────────────────────────
+
+function buildCraftTreeNode(itemName, qty, path, depth) {
+  const recipe = getRecipeFor(itemName);
+  const whAmt = (window.STATE.warehouse || [])
+    .filter(i => i.name.toLowerCase() === itemName.toLowerCase())
+    .reduce((s, i) => s + Number(i.quantity || 0), 0);
+  const isNonCraft = isNonCraftable(itemName);
+  const isBase = !recipe || recipe.length === 0;
+
+  const node = {
+    name: itemName,
+    qty,
+    whAmt,
+    path: [...path],
+    depth,
+    isBase: isBase || isNonCraft,
+    isNonCraft,
+    children: []
+  };
+
+  if (!isBase && !isNonCraft && depth < 8) {
+    for (const mat of recipe) {
+      node.children.push(buildCraftTreeNode(mat.name, mat.needed * qty, [...path, itemName], depth + 1));
+    }
+  }
+  return node;
+}
+
+function collectBaseLeaves(node, acc) {
+  if (!acc) acc = {};
+  if (node.children.length === 0) {
+    const key = node.name;
+    if (!acc[key]) acc[key] = { name: node.name, qty: 0, isNonCraft: node.isNonCraft };
+    acc[key].qty += node.qty;
+  } else {
+    for (const child of node.children) collectBaseLeaves(child, acc);
+  }
+  return acc;
+}
+
+let _ctNodeCounter = 0;
+function renderCraftNode(node, isRoot) {
+  const nodeId = 'ctn-' + (++_ctNodeCounter);
+  const hasChildren = node.children.length > 0;
+  const whOk = node.whAmt >= node.qty;
+  const whColor = whOk ? 'var(--green)' : node.whAmt > 0 ? 'var(--gold)' : 'var(--red)';
+
+  // Breadcrumb path: shows WHY this material is in the chain
+  let pathHTML = '';
+  if (node.path && node.path.length > 0) {
+    const crumbs = node.path.map((seg, i) =>
+      `${i > 0 ? '<span class="ct-path-arrow">▶</span>' : ''}<span>${seg}</span>`
+    ).join('') + `<span class="ct-path-arrow">▶</span><span style="color:var(--text)">${node.name}</span>`;
+    pathHTML = `<div class="ct-path" title="Esta es la razón por la que se necesita este material">${crumbs}</div>`;
+  }
+
+  let typeBadge = '';
+  if (node.isNonCraft) {
+    typeBadge = `<span class="source-badge source-drop" title="Solo se obtiene por drop/boss/quest">Drop/Boss</span>`;
+  } else if (hasChildren) {
+    typeBadge = `<span class="source-badge source-craft" title="Este ítem también tiene receta propia — expandible">Crafteable</span>`;
+  } else {
+    typeBadge = `<span class="source-badge source-shop" title="Material base — farmeable, spoileable o comprable">Mat. Base</span>`;
+  }
+
+  const headerClass = [
+    'ct-node-header',
+    isRoot ? 'root-node' : (hasChildren ? 'sub-node' : (node.isNonCraft ? 'missing-node' : 'base-node')),
+    hasChildren ? 'has-children' : ''
+  ].join(' ');
+
+  const toggleIcon = hasChildren
+    ? `<i class="ct-toggle-icon ri-arrow-right-s-line" id="ti-${nodeId}"></i>`
+    : `<i class="ct-toggle-icon ri-corner-down-right-line" style="opacity:.3"></i>`;
+
+  const childrenHTML = hasChildren ? `
+    <div class="ct-children" id="${nodeId}">
+      ${node.children.map(child => `<div class="ct-child-wrap">${renderCraftNode(child, false)}</div>`).join('')}
+    </div>` : '';
+
+  return `<div class="ct-node">
+      ${pathHTML}
+      <div class="${headerClass}" ${hasChildren ? `onclick="ctToggle('${nodeId}')"` : ''}>
+        ${toggleIcon}
+        <span class="ct-item-name">${node.name}</span>
+        ${typeBadge}
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
+          <span class="ct-qty">×${node.qty}</span>
+          <span class="ct-wh-info" style="color:${whColor}">Almacén: ${node.whAmt}${whOk ? ' ✓' : ''}</span>
+        </div>
+      </div>
+      ${childrenHTML}
+    </div>`;
+}
+
+window.ctToggle = function(nodeId) {
+  const el = document.getElementById(nodeId);
+  const icon = document.getElementById('ti-' + nodeId);
+  if (!el) return;
+  const open = el.classList.toggle('open');
+  if (icon) icon.classList.toggle('open', open);
+};
+
+window.viewCraftDetail = function(craftId, mult) {
+  const c = window.STATE.crafts.find(x => x.id === craftId);
+  if (!c) return;
+  const multiplier = Math.max(1, parseInt(mult) || 1);
+
+  const stBadge = {
+    active: "<span class='badge badge-blue'>En Progreso</span>",
+    completed: "<span class='badge badge-green'>Completado</span>",
+    cancelled: "<span class='badge badge-red'>Cancelado</span>"
+  };
+
+  const mats = c.materials || [];
+  let totalNeeded = 0, totalCollected = 0;
+  mats.forEach(m => {
+    const whAmt = (window.STATE.warehouse || []).filter(i => i.name.toLowerCase() === m.name.toLowerCase()).reduce((s, i) => s + Number(i.quantity || 0), 0);
+    totalNeeded += Number(m.needed || 0) * multiplier;
+    totalCollected += Math.min(Number(m.needed || 0) * multiplier, whAmt);
+  });
+  const pct = totalNeeded ? Math.min(100, Math.round(totalCollected / totalNeeded * 100)) : 0;
+  const pctColor = pct >= 100 ? 'var(--green)' : pct >= 50 ? 'var(--gold)' : 'var(--red)';
+
+  // Build tree nodes for each material
+  _ctNodeCounter = 0;
+  const treeRootsHTML = mats.length > 0 ? mats.map(m => {
+    const qty = Number(m.needed || 1) * multiplier;
+    const node = buildCraftTreeNode(m.name, qty, [c.targetItem], 1);
+    return renderCraftNode(node, true);
+  }).join('<div style="margin:12px 0;border-top:1px dashed var(--border)"></div>') :
+    `<div class="empty-state" style="padding:30px"><i class="ri-list-check-2"></i><p>No hay materiales configurados en este craft.</p></div>`;
+
+  // Flat base materials summary
+  const baseSummary = {};
+  mats.forEach(m => {
+    const qty = Number(m.needed || 1) * multiplier;
+    const node = buildCraftTreeNode(m.name, qty, [], 0);
+    collectBaseLeaves(node, baseSummary);
+  });
+  const baseSummaryRows = Object.values(baseSummary).sort((a, b) => b.qty - a.qty).map(mat => {
+    const whAmt = (window.STATE.warehouse || []).filter(i => i.name.toLowerCase() === mat.name.toLowerCase()).reduce((s, i) => s + Number(i.quantity || 0), 0);
+    const ok = whAmt >= mat.qty;
+    const missing = Math.max(0, mat.qty - whAmt);
+    const badge = mat.isNonCraft
+      ? `<span class="source-badge source-drop">Drop</span>`
+      : `<span class="source-badge source-craft">Craft</span>`;
+    return `<div class="summary-row">
+      <span class="summary-mat-name">${mat.name}</span>
+      ${badge}
+      <span class="summary-needed">×${mat.qty}</span>
+      <span class="summary-have ${ok ? 'ok' : 'short'}">${ok ? `✓ ${whAmt}` : `Faltan ${missing}`}</span>
+    </div>`;
+  }).join('');
+
+  // Per-material progress cards
+  const matCardsHTML = mats.map(m => {
+    const qtyNeeded = Number(m.needed || 1) * multiplier;
+    const whAmt = (window.STATE.warehouse || []).filter(i => i.name.toLowerCase() === m.name.toLowerCase()).reduce((s, i) => s + Number(i.quantity || 0), 0);
+    const matPct = qtyNeeded ? Math.min(100, Math.round(whAmt / qtyNeeded * 100)) : 0;
+    const ok = whAmt >= qtyNeeded;
+    const recipe = getRecipeFor(m.name);
+    const hasSubTree = recipe && recipe.length > 0;
+    const subInfo = hasSubTree
+      ? `<div style="font-size:.68rem;color:var(--gold);margin-top:4px"><i class="ri-hammer-line"></i> Se craftea con ${recipe.length} componente(s) — ver árbol abajo</div>`
+      : isNonCraftable(m.name)
+        ? `<div style="font-size:.68rem;color:var(--red);margin-top:4px"><i class="ri-forbid-line"></i> Solo Drop / Boss — no se craftea</div>`
+        : `<div style="font-size:.68rem;color:var(--green);margin-top:4px"><i class="ri-leaf-line"></i> Material Base — farmeable o comprable</div>`;
+    return `<div style="background:var(--bg3);border:1px solid ${ok ? 'rgba(46,204,113,.35)' : 'var(--border)'};border-radius:8px;padding:10px 13px">
+      <div style="font-weight:600;font-size:.84rem">${m.name}</div>
+      ${subInfo}
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+        <span style="font-size:.9rem;font-weight:700;color:${ok ? 'var(--green)' : 'var(--text)'}">${whAmt}</span>
+        <span style="color:var(--text3)">/ ${qtyNeeded}</span>
+        <div class="progress-bar" style="flex:1;height:5px">
+          <div class="progress-fill" style="width:${matPct}%;background:${ok ? 'var(--green)' : 'var(--gold-dark)'}"></div>
+        </div>
+        <span style="font-size:.72rem;color:var(--text3)">${matPct}%</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const multButtons = [1, 5, 10, 20, 30, 50].map(n =>
+    `<button class="mult-btn${multiplier === n ? ' active' : ''}" onclick="viewCraftDetail('${c.id}', ${n})">×${n}</button>`
+  ).join('');
+
+  document.getElementById("content").innerHTML = `
+    <div class="craft-back-row">
+      <button class="btn btn-ghost btn-sm" onclick="crafts()"><i class="ri-arrow-left-line"></i> Volver a Crafts</button>
+      ${window.STATE.isAdmin ? `
+        <button class="btn btn-ghost btn-sm" onclick="editCraft('${c.id}')"><i class="ri-edit-line"></i> Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="delCraft('${c.id}')"><i class="ri-delete-bin-line"></i> Eliminar</button>
+      ` : ''}
+    </div>
+
+    <div class="craft-detail-header">
+      <div style="display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--gold-dark),var(--gold));font-size:1.5rem;flex-shrink:0">⚒️</div>
+      <div style="flex:1">
+        <div class="craft-detail-title">${c.targetItem}</div>
+        <div class="craft-detail-subtitle">
+          Crafter: ${window.memberName(c.crafterId) || "Sin asignar"} &nbsp;·&nbsp; ${stBadge[c.status] || c.status}
+          ${c.createdAt ? `&nbsp;·&nbsp; Creado: ${new Date(c.createdAt).toLocaleDateString('es-ES')}` : ''}
+        </div>
+      </div>
+      <div class="mult-bar">
+        <label><i class="ri-calculator-line"></i> Cantidad</label>
+        ${multButtons}
+        <input class="mult-input" type="number" min="1" value="${multiplier}" id="custom-mult-input"
+          title="Ingresa una cantidad personalizada y presiona Enter"
+          onchange="viewCraftDetail('${c.id}', this.value)"
+          onkeydown="if(event.key==='Enter') viewCraftDetail('${c.id}', this.value)">
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:.82rem;color:var(--text2)"><i class="ri-bar-chart-box-line"></i> Progreso Global — ${c.targetItem} ×${multiplier}</span>
+        <span style="font-weight:700;font-size:1rem;color:${pctColor}">${pct}%</span>
+      </div>
+      <div class="progress-bar" style="height:10px;margin-bottom:6px">
+        <div class="progress-fill" style="width:${pct}%;background:${pctColor}"></div>
+      </div>
+      <div style="font-size:.72rem;color:var(--text3)">${totalCollected} / ${totalNeeded} unidades totales en almacén considerando el multiplicador ×${multiplier}</div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="craft-tree-title"><i class="ri-stack-line"></i> Materiales Directos del Crafteo (×${multiplier})</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px">
+        ${matCardsHTML || '<div style="color:var(--text3);font-size:.82rem">Sin materiales registrados.</div>'}
+      </div>
+    </div>
+
+    <div class="craft-sections-grid">
+      <div class="craft-tree-wrap">
+        <div class="craft-tree-title"><i class="ri-node-tree"></i> Árbol de Crafteo — Por qué se necesita cada material</div>
+        <div style="font-size:.73rem;color:var(--text3);margin-bottom:14px;padding:8px 10px;background:var(--bg2);border-radius:6px;border:1px solid var(--border)">
+          <i class="ri-information-line" style="color:var(--gold-dark)"></i>
+          La <b>ruta gris</b> sobre cada elemento muestra de dónde viene: qué ítem padre lo necesita y por qué forma parte de la cadena.
+          Haz clic en los nodos <span style="color:var(--blue)">azules (Crafteable)</span> para expandir sus sub-componentes.
+          <span style="color:var(--green)">Verde</span> = material base · <span style="color:var(--red)">Rojo</span> = solo drop/boss.
+        </div>
+        ${treeRootsHTML}
+      </div>
+
+      <div class="craft-summary-panel">
+        <div class="summary-card">
+          <div class="summary-card-title"><i class="ri-list-check-3"></i> Materiales Base Totales (×${multiplier})</div>
+          <div style="font-size:.72rem;color:var(--text3);margin-bottom:10px">
+            Todos los componentes finales una vez desenrollado el árbol completo. Lo que realmente necesitas juntar.
+          </div>
+          ${Object.values(baseSummary).length > 0 ? baseSummaryRows :
+            '<div style="font-size:.8rem;color:var(--text3)">Sin materiales base calculables.</div>'}
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-card-title"><i class="ri-sticky-note-line"></i> Notas / Guía del Crafteo</div>
+          <div style="font-size:.72rem;color:var(--text3);margin-bottom:8px">
+            Documenta cómo conseguir los materiales, dónde farmear, el orden recomendado, costos estimados, etapas, etc.
+          </div>
+          <textarea class="notes-area" id="craft-notes-area"
+            placeholder="Ej: Para hacer este collar primero necesitamos farmear Crystal S bla bla bla los amo <3"
+          >${c.notes || ''}</textarea>
+          ${window.STATE.isAdmin ? `
+          <button class="btn btn-primary btn-sm" style="margin-top:8px;width:100%" onclick="saveCraftNotes('${c.id}')">
+            <i class="ri-save-line"></i> Guardar Notas
+          </button>` : ''}
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-card-title"><i class="ri-calculator-line"></i> Calculadora de Escala</div>
+          <div style="font-size:.72rem;color:var(--text3);margin-bottom:10px">
+            ¿Cuántos materiales base necesitarías para diferentes cantidades?
+          </div>
+          ${[1, 5, 10, 20, 30].map(n => {
+            const scaledBase = {};
+            mats.forEach(m => {
+              const node = buildCraftTreeNode(m.name, Number(m.needed || 1) * n, [], 0);
+              collectBaseLeaves(node, scaledBase);
+            });
+            const totalPieces = Object.values(scaledBase).reduce((s, x) => s + x.qty, 0);
+            const isActive = n === multiplier;
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;margin-bottom:3px;border-radius:5px;background:${isActive ? 'rgba(212,160,23,.1)' : 'transparent'};border:1px solid ${isActive ? 'var(--gold-dark)' : 'transparent'};font-size:.78rem">
+              <span style="color:${isActive ? 'var(--gold)' : 'var(--text2)'}">×${n} ${c.targetItem}</span>
+              <span style="color:${isActive ? 'var(--gold-light)' : 'var(--text3)'};font-weight:${isActive ? '700' : '400'}">${totalPieces.toLocaleString()} piezas base</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`;
+};
+
+window.setCraftMult = function(craftId, m) {
+  window.viewCraftDetail(craftId, m);
+};
+
+window.saveCraftNotes = async function(craftId) {
+  if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
+  const notes = document.getElementById("craft-notes-area")?.value || "";
+  const c = window.STATE.crafts.find(x => x.id === craftId);
+  if (!c) return;
+  c.notes = notes;
+  await window.saveFireDoc(`clans/${window.CLAN_ID}/crafts`, craftId, { notes });
+  window.toast("Notas guardadas ✓", "success");
 };
 
 window.updateCraftMat = async (craftId, idx, val) => {
@@ -456,6 +721,7 @@ window.updateCraftMat = async (craftId, idx, val) => {
   window.toast("Actualizado", "success");
   window.crafts(); // re-render to update dynamic evaluations
 };
+
 
 // ── SMART CRAFT AUTO-FILL ENGINE ─────────────────
 /**
