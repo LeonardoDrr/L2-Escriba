@@ -1,4 +1,4 @@
-﻿import { searchItems, CATEGORY_LABELS } from "./items-db.js?v=6";
+import { searchItems, CATEGORY_LABELS } from "./items-db.js?v=6";
 import { getRecipeFor, isNonCraftable, evaluateCraftTree } from "./crafts-recipes.js?v=6";
 
 
@@ -497,7 +497,7 @@ function renderCraftNode(node, isRoot) {
         ${typeBadge}
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
           <span class="ct-qty">×${node.qty}</span>
-          <span class="ct-wh-info" style="color:${whColor}">Almacén: ${node.whAmt}${whOk ? ' ✓' : ''}</span>
+          <span class="ct-wh-info" style="color:${whColor}">Almacén: ${node.whAmt} ${whOk ? `(Sobran ${node.whAmt - node.qty}) ✓` : `(Faltan ${node.qty - node.whAmt})`}</span>
         </div>
       </div>
       ${childrenHTML}
@@ -549,27 +549,57 @@ window.viewCraftDetail = function(craftId, mult) {
     const node = buildCraftTreeNode(m.name, qty, [], 0);
     collectBaseLeaves(node, baseSummary);
   });
+  
+  let maxCraftsPossible = Infinity;
+
   const baseSummaryRows = Object.values(baseSummary).sort((a, b) => b.qty - a.qty).map(mat => {
     const whAmt = (window.STATE.warehouse || []).filter(i => i.name.toLowerCase() === mat.name.toLowerCase()).reduce((s, i) => s + Number(i.quantity || 0), 0);
     const ok = whAmt >= mat.qty;
     const missing = Math.max(0, mat.qty - whAmt);
+    
+    const neededPerTarget = mat.qty / multiplier;
+    const craftableWithThis = neededPerTarget > 0 ? Math.floor(whAmt / neededPerTarget) : 0;
+    if (craftableWithThis < maxCraftsPossible) {
+      maxCraftsPossible = craftableWithThis;
+    }
+
     const badge = mat.isNonCraft
       ? `<span class="source-badge source-drop">Drop</span>`
       : `<span class="source-badge source-craft">Craft</span>`;
-    return `<div class="summary-row">
-      <span class="summary-mat-name">${mat.name}</span>
-      ${badge}
-      <span class="summary-needed">×${mat.qty}</span>
-      <span class="summary-have ${ok ? 'ok' : 'short'}">${ok ? `✓ ${whAmt}` : `Faltan ${missing}`}</span>
+
+    const statusText = ok 
+      ? `<span style="color:var(--green)">✓ Sobran ${whAmt - mat.qty}</span>` 
+      : `<span style="color:var(--red)">Faltan ${missing}</span>`;
+
+    return `<div class="summary-row" style="padding: 8px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg3);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <div>
+          <span class="summary-mat-name" style="font-weight:600">${mat.name}</span>
+          ${badge}
+        </div>
+        <span style="font-size:.8rem; font-weight:700">Inventario: ${whAmt} / Necesario: ${mat.qty}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:.75rem;">
+        ${statusText}
+        <span style="color:var(--text3)">(Alcanza para <b style="color:var(--gold-light)">${craftableWithThis}</b> crafts)</span>
+      </div>
     </div>`;
   }).join('');
+  
+  if (Object.values(baseSummary).length === 0) {
+    maxCraftsPossible = 0;
+  }
 
   // Per-material progress cards
   const matCardsHTML = mats.map(m => {
     const qtyNeeded = Number(m.needed || 1) * multiplier;
+    const neededPerTarget = Number(m.needed || 1);
     const whAmt = (window.STATE.warehouse || []).filter(i => i.name.toLowerCase() === m.name.toLowerCase()).reduce((s, i) => s + Number(i.quantity || 0), 0);
     const matPct = qtyNeeded ? Math.min(100, Math.round(whAmt / qtyNeeded * 100)) : 0;
     const ok = whAmt >= qtyNeeded;
+    const missing = Math.max(0, qtyNeeded - whAmt);
+    const craftableWithThis = neededPerTarget > 0 ? Math.floor(whAmt / neededPerTarget) : 0;
+
     const recipe = getRecipeFor(m.name);
     const hasSubTree = recipe && recipe.length > 0;
     const subInfo = hasSubTree
@@ -580,13 +610,17 @@ window.viewCraftDetail = function(craftId, mult) {
     return `<div style="background:var(--bg3);border:1px solid ${ok ? 'rgba(46,204,113,.35)' : 'var(--border)'};border-radius:8px;padding:10px 13px">
       <div style="font-weight:600;font-size:.84rem">${m.name}</div>
       ${subInfo}
-      <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;margin-bottom:6px">
         <span style="font-size:.9rem;font-weight:700;color:${ok ? 'var(--green)' : 'var(--text)'}">${whAmt}</span>
         <span style="color:var(--text3)">/ ${qtyNeeded}</span>
         <div class="progress-bar" style="flex:1;height:5px">
           <div class="progress-fill" style="width:${matPct}%;background:${ok ? 'var(--green)' : 'var(--gold-dark)'}"></div>
         </div>
         <span style="font-size:.72rem;color:var(--text3)">${matPct}%</span>
+      </div>
+      <div style="font-size:.72rem; color:var(--text2); background:var(--bg2); padding:4px 6px; border-radius:4px; display:flex; justify-content:space-between;">
+        <div>${ok ? `<span style="color:var(--green)">✓ Sobran ${whAmt - qtyNeeded}</span>` : `<span style="color:var(--red)">Faltan ${missing}</span>`}</div>
+        <div>Alcanza para: <b style="color:var(--gold-light)">${craftableWithThis}</b></div>
       </div>
     </div>`;
   }).join('');
@@ -631,7 +665,15 @@ window.viewCraftDetail = function(craftId, mult) {
       <div class="progress-bar" style="height:10px;margin-bottom:6px">
         <div class="progress-fill" style="width:${pct}%;background:${pctColor}"></div>
       </div>
-      <div style="font-size:.72rem;color:var(--text3)">${totalCollected} / ${totalNeeded} unidades totales en almacén considerando el multiplicador ×${multiplier}</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-bottom:12px">${totalCollected} / ${totalNeeded} unidades totales en almacén considerando el multiplicador ×${multiplier}</div>
+      
+      <div style="background: rgba(212, 160, 23, 0.08); border: 1px solid rgba(212, 160, 23, 0.2); border-radius: 6px; padding: 10px; display: flex; align-items: center; gap: 10px;">
+        <i class="ri-information-line" style="color:var(--gold); font-size:1.4rem"></i>
+        <div>
+          <div style="font-size:.78rem; color:var(--gold-light); font-weight:600; margin-bottom:2px">Capacidad de Crafteo</div>
+          <div style="font-size:.75rem; color:var(--text2);">Con tu inventario actual, tienes materiales base para craftear un máximo de <b style="color:var(--green); font-size:.85rem">${maxCraftsPossible === Infinity ? 0 : maxCraftsPossible}</b> <b>${c.targetItem}</b>.</div>
+        </div>
+      </div>
     </div>
 
     <div class="card" style="margin-bottom:16px">
