@@ -766,6 +766,8 @@ function memberFormHTML(m = {}) {
       ${subRow(3)}
       ${subRow(4)}
       ${subRow(5)}
+      ${subRow(6)}
+      ${subRow(7)}
     </div>
     <div class="form-row"><label>Estado</label>
       <select id="f-status">
@@ -785,7 +787,7 @@ function gatherMemberData() {
   const cls = document.getElementById("f-class").value;
 
   const subclasses = [];
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 7; i++) {
     const scClass = document.getElementById(`f-subclass${i}`)?.value;
     const scLvl = document.getElementById(`f-sublevel${i}`)?.value;
     if (scClass) {
