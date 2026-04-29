@@ -410,18 +410,32 @@ window.crafts = function () {
 // CRAFT DETAIL — Vista completa con árbol, multiplicador y notas
 // ─────────────────────────────────────────────────────────────────────────────
 
-function buildCraftTreeNode(itemName, qty, path, depth) {
+function buildCraftTreeNode(itemName, qty, path, depth, whPool) {
   const recipe = getRecipeFor(itemName);
-  const whAmt = (window.STATE.warehouse || [])
-    .filter(i => i.name.toLowerCase() === itemName.toLowerCase())
+  const itemNameLower = itemName.toLowerCase();
+
+  let whAmtAvailable = 0;
+  let usedFromPool = 0;
+  if (whPool) {
+    whAmtAvailable = whPool[itemNameLower] || 0;
+    usedFromPool = Math.min(qty, whAmtAvailable);
+    whPool[itemNameLower] -= usedFromPool;
+  }
+  
+  const craftQty = qty - usedFromPool;
+
+  const fullWhAmt = (window.STATE.warehouse || [])
+    .filter(i => i.name.toLowerCase() === itemNameLower)
     .reduce((s, i) => s + Number(i.quantity || 0), 0);
+
   const isNonCraft = isNonCraftable(itemName);
   const isBase = !recipe || recipe.length === 0;
 
   const node = {
     name: itemName,
     qty,
-    whAmt,
+    whAmt: fullWhAmt,
+    craftQty,
     path: [...path],
     depth,
     isBase: isBase || isNonCraft,
@@ -431,7 +445,7 @@ function buildCraftTreeNode(itemName, qty, path, depth) {
 
   if (!isBase && !isNonCraft && depth < 8) {
     for (const mat of recipe) {
-      node.children.push(buildCraftTreeNode(mat.name, mat.needed * qty, [...path, itemName], depth + 1));
+      node.children.push(buildCraftTreeNode(mat.name, mat.needed * craftQty, [...path, itemName], depth + 1, whPool));
     }
   }
   return node;
@@ -489,7 +503,9 @@ function renderCraftNode(node, isRoot) {
       ${node.children.map(child => `<div class="ct-child-wrap">${renderCraftNode(child, false)}</div>`).join('')}
     </div>` : '';
 
-  return `<div class="ct-node">
+  const opacity = node.qty === 0 ? '0.45' : '1';
+
+  return `<div class="ct-node" style="opacity:${opacity}">
       ${pathHTML}
       <div class="${headerClass}" ${hasChildren ? `onclick="ctToggle('${nodeId}')"` : ''}>
         ${toggleIcon}
@@ -535,41 +551,59 @@ window.viewCraftDetail = function(craftId, mult) {
 
   // Build tree nodes for each material
   _ctNodeCounter = 0;
-  const treeRootsHTML = mats.length > 0 ? mats.map(m => {
+  
+  const whPoolTree = {};
+  (window.STATE.warehouse || []).forEach(i => {
+     const name = i.name.toLowerCase();
+     whPoolTree[name] = (whPoolTree[name] || 0) + Number(i.quantity || 0);
+  });
+
+  const treeNodes = mats.map(m => {
     const qty = Number(m.needed || 1) * multiplier;
-    const node = buildCraftTreeNode(m.name, qty, [c.targetItem], 1);
+    return buildCraftTreeNode(m.name, qty, [c.targetItem], 1, whPoolTree);
+  });
+
+  const treeRootsHTML = treeNodes.length > 0 ? treeNodes.map(node => {
     return renderCraftNode(node, true);
   }).join('<div style="margin:12px 0;border-top:1px dashed var(--border)"></div>') :
     `<div class="empty-state" style="padding:30px"><i class="ri-list-check-2"></i><p>No hay materiales configurados en este craft.</p></div>`;
 
-  // Flat base materials summary
+  // Flat base materials summary based on ACTUAL missing materials
   const baseSummary = {};
+  treeNodes.forEach(node => collectBaseLeaves(node, baseSummary));
+  
+  // Calculate absolute base cost for maxCraftsPossible
+  const absoluteBaseCost = {};
   mats.forEach(m => {
-    const qty = Number(m.needed || 1) * multiplier;
-    const node = buildCraftTreeNode(m.name, qty, [], 0);
-    collectBaseLeaves(node, baseSummary);
+    const node = buildCraftTreeNode(m.name, Number(m.needed || 1), [], 0);
+    collectBaseLeaves(node, absoluteBaseCost);
   });
   
   let maxCraftsPossible = Infinity;
-
-  const baseSummaryRows = Object.values(baseSummary).sort((a, b) => b.qty - a.qty).map(mat => {
+  Object.values(absoluteBaseCost).forEach(mat => {
     const whAmt = (window.STATE.warehouse || []).filter(i => i.name.toLowerCase() === mat.name.toLowerCase()).reduce((s, i) => s + Number(i.quantity || 0), 0);
-    const ok = whAmt >= mat.qty;
-    const missing = Math.max(0, mat.qty - whAmt);
-    
-    const neededPerTarget = mat.qty / multiplier;
-    const craftableWithThis = neededPerTarget > 0 ? Math.floor(whAmt / neededPerTarget) : 0;
+    const craftableWithThis = Math.floor(whAmt / mat.qty);
     if (craftableWithThis < maxCraftsPossible) {
       maxCraftsPossible = craftableWithThis;
     }
+  });
+  if (Object.keys(absoluteBaseCost).length === 0) maxCraftsPossible = 0;
+
+  const activeBaseSummary = Object.values(baseSummary).filter(x => x.qty > 0).sort((a, b) => b.qty - a.qty);
+
+  const baseSummaryRows = activeBaseSummary.map(mat => {
+    const whAmt = (window.STATE.warehouse || []).filter(i => i.name.toLowerCase() === mat.name.toLowerCase()).reduce((s, i) => s + Number(i.quantity || 0), 0);
+    const totalAbsoluteNeeded = absoluteBaseCost[mat.name] ? absoluteBaseCost[mat.name].qty * multiplier : mat.qty;
+    
+    const missing = mat.qty;
+    const baseCostPerItem = absoluteBaseCost[mat.name] ? absoluteBaseCost[mat.name].qty : 1;
+    const craftableWithThis = Math.floor(whAmt / baseCostPerItem);
 
     const badge = mat.isNonCraft
       ? `<span class="source-badge source-drop">Drop</span>`
       : `<span class="source-badge source-craft">Craft</span>`;
 
-    const statusText = ok 
-      ? `<span style="color:var(--green)">✓ Sobran ${whAmt - mat.qty}</span>` 
-      : `<span style="color:var(--red)">Faltan ${missing}</span>`;
+    const statusText = `<span style="color:var(--red)">Faltan ${missing}</span>`;
 
     return `<div class="summary-row" style="padding: 8px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg3);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
@@ -577,7 +611,7 @@ window.viewCraftDetail = function(craftId, mult) {
           <span class="summary-mat-name" style="font-weight:600">${mat.name}</span>
           ${badge}
         </div>
-        <span style="font-size:.8rem; font-weight:700">Inventario: ${whAmt} / Necesario: ${mat.qty}</span>
+        <span style="font-size:.8rem; font-weight:700">Inventario: ${whAmt} / Necesario: ${totalAbsoluteNeeded}</span>
       </div>
       <div style="display:flex; justify-content:space-between; font-size:.75rem;">
         ${statusText}
@@ -585,10 +619,6 @@ window.viewCraftDetail = function(craftId, mult) {
       </div>
     </div>`;
   }).join('');
-  
-  if (Object.values(baseSummary).length === 0) {
-    maxCraftsPossible = 0;
-  }
 
   // Per-material progress cards
   const matCardsHTML = mats.map(m => {
@@ -701,8 +731,8 @@ window.viewCraftDetail = function(craftId, mult) {
           <div style="font-size:.72rem;color:var(--text3);margin-bottom:10px">
             Todos los componentes finales una vez desenrollado el árbol completo. Lo que realmente necesitas juntar.
           </div>
-          ${Object.values(baseSummary).length > 0 ? baseSummaryRows :
-            '<div style="font-size:.8rem;color:var(--text3)">Sin materiales base calculables.</div>'}
+          ${activeBaseSummary.length > 0 ? baseSummaryRows :
+            '<div style="font-size:.8rem;color:var(--green);padding:10px;background:rgba(46,204,113,.1);border-radius:6px"><i class="ri-check-double-line"></i> ¡Todos los materiales base necesarios ya están cubiertos por tu inventario o componentes pre-crafteados!</div>'}
         </div>
 
         <div class="summary-card">
@@ -726,11 +756,16 @@ window.viewCraftDetail = function(craftId, mult) {
           </div>
           ${[1, 5, 10, 20, 30].map(n => {
             const scaledBase = {};
+            const localPool = {};
+            (window.STATE.warehouse || []).forEach(i => {
+               const name = i.name.toLowerCase();
+               localPool[name] = (localPool[name] || 0) + Number(i.quantity || 0);
+            });
             mats.forEach(m => {
-              const node = buildCraftTreeNode(m.name, Number(m.needed || 1) * n, [], 0);
+              const node = buildCraftTreeNode(m.name, Number(m.needed || 1) * n, [], 0, localPool);
               collectBaseLeaves(node, scaledBase);
             });
-            const totalPieces = Object.values(scaledBase).reduce((s, x) => s + x.qty, 0);
+            const totalPieces = Object.values(scaledBase).filter(x => x.qty > 0).reduce((s, x) => s + x.qty, 0);
             const isActive = n === multiplier;
             return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;margin-bottom:3px;border-radius:5px;background:${isActive ? 'rgba(212,160,23,.1)' : 'transparent'};border:1px solid ${isActive ? 'var(--gold-dark)' : 'transparent'};font-size:.78rem">
               <span style="color:${isActive ? 'var(--gold)' : 'var(--text2)'}">×${n} ${c.targetItem}</span>
@@ -2377,4 +2412,277 @@ window.fulfillDesired = async function (id) {
   if (!confirm("¿Marcar todos los ítems de esta lista como cumplidos/obtenidos?")) return;
   await window.saveFireDoc(`clans/${window.CLAN_ID}/desired`, id, { status: "fulfilled" });
   window.toast("Ítems marcados como cumplidos", "success");
+};
+
+// ── MISIÓN SEMANAL ───────────────────────────────────────
+window.weeklyMissions = function () {
+  const missions = window.STATE.weeklyMissions; // ya ordenadas por fecha asc
+  const members  = window.STATE.members;
+
+  const styles = `
+    <style>
+      .wm-wrap { overflow-x: auto; }
+      .wm-table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: max-content; }
+      .wm-table thead th {
+        position: sticky; top: 0; z-index: 10;
+        background: var(--bg3); color: var(--text2);
+        font-weight: 600; font-size: 0.72rem; text-transform: uppercase;
+        letter-spacing: 0.5px; padding: 10px 12px;
+        border-bottom: 2px solid var(--border);
+        white-space: nowrap;
+      }
+      .wm-table thead th.th-member { text-align: center; min-width: 110px; }
+      .wm-table tbody td { padding: 6px 10px; border-bottom: 1px solid rgba(42,38,80,.45); }
+      .wm-table tbody tr:hover td { background: rgba(255,255,255,.025); }
+      .wm-date-col { white-space: nowrap; font-weight: 600; color: var(--gold-light); font-size: 0.85rem; }
+      .wm-sel {
+        appearance: none; -webkit-appearance: none;
+        border: 1px solid var(--border); background: var(--bg3);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.78rem; font-weight: 600;
+        cursor: pointer; width: 100%; text-align: center;
+        padding: 5px 8px; border-radius: 6px; outline: none;
+        transition: background .15s, border-color .15s;
+      }
+      .wm-sel.entregado    { color: #2ecc71; background: rgba(46,204,113,.15); border-color: rgba(46,204,113,.35); }
+      .wm-sel.no_entregado { color: #e03535; background: rgba(224,53,53,.12);  border-color: rgba(224,53,53,.3); }
+      .wm-sel.pending      { color: var(--text3); }
+      .wm-sel:focus { box-shadow: 0 0 0 2px rgba(212,160,23,.35); }
+      .wm-del-btn { opacity: 0; transition: opacity .2s; }
+      .wm-table tbody tr:hover .wm-del-btn { opacity: 1; }
+    </style>
+  `;
+
+  const memberHeaders = members.map(m =>
+    `<th class="th-member" title="${m.class || ''}">${m.nickname}</th>`
+  ).join('');
+
+  const rows = missions.map(ms => {
+    const deliveries = ms.deliveries || {};
+    const dateLabel = ms.date
+      ? new Date(ms.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+      : ms.date;
+
+    const participants = ms.participants || members.map(m => m.id);
+    const delivered = participants.filter(id => deliveries[id] === 'entregado').length;
+    const total = participants.length;
+    const pct = total ? Math.round(delivered / total * 100) : 0;
+    const pctColor = pct === 100 ? '#2ecc71' : pct >= 50 ? 'var(--gold)' : '#e03535';
+
+
+    const cells = members.map(m => {
+      const isParticipant = participants.includes(m.id);
+      if (!isParticipant) {
+        return `<td style="text-align:center"><span style="color:var(--text3);font-size:.8rem;opacity:.4">N/A</span></td>`;
+      }
+      const val = deliveries[m.id] || '';
+      const cls = val === 'entregado' ? 'entregado' : val === 'no_entregado' ? 'no_entregado' : 'pending';
+
+      if (window.STATE.isAdmin) {
+        return `
+          <td style="text-align:center">
+            <select class="wm-sel ${cls}"
+              onchange="toggleDelivery('${ms.id}','${m.id}',this.value); this.className='wm-sel '+(this.value==='entregado'?'entregado':this.value==='no_entregado'?'no_entregado':'pending')">
+              <option value="" ${val === '' ? 'selected' : ''}>— Pendiente</option>
+              <option value="entregado" ${val === 'entregado' ? 'selected' : ''}>✅ Entregado</option>
+              <option value="no_entregado" ${val === 'no_entregado' ? 'selected' : ''}>❌ No entregado</option>
+            </select>
+          </td>`;
+      } else {
+        const badge = val === 'entregado'
+          ? `<span style="color:#2ecc71;font-size:1.1rem">✅</span>`
+          : val === 'no_entregado'
+            ? `<span style="color:#e03535;font-size:1.1rem">❌</span>`
+            : `<span style="color:var(--text3);font-size:.85rem">—</span>`;
+        return `<td style="text-align:center">${badge}</td>`;
+      }
+    }).join('');
+
+    const delBtn = window.STATE.isAdmin
+      ? `<button class="btn btn-danger btn-icon btn-sm wm-del-btn"
+           onclick="delWeeklyMission('${ms.id}')" title="Eliminar semana">
+           <i class="ri-delete-bin-line"></i>
+         </button>`
+      : '';
+
+    return `
+      <tr>
+        <td class="wm-date-col">
+          <div style="display:flex;align-items:center;gap:8px">
+            <i class="ri-calendar-event-line" style="color:var(--gold);font-size:1rem"></i>
+            ${dateLabel}
+          </div>
+        </td>
+        ${cells}
+        <td style="text-align:center;white-space:nowrap;padding:6px 12px">
+          <b style="font-size:.8rem;color:${pctColor}">${delivered}/${total}</b>
+          <div style="height:4px;background:var(--bg3);border-radius:2px;margin-top:3px;min-width:50px">
+            <div style="height:100%;border-radius:2px;background:${pctColor};width:${pct}%;transition:width .3s"></div>
+          </div>
+        </td>
+        <td style="width:40px;text-align:center">${delBtn}</td>
+      </tr>`;
+  }).join('') || `
+    <tr>
+      <td colspan="${members.length + 3}">
+        <div class="empty-state">
+          <i class="ri-calendar-check-line"></i>
+          <p>No hay semanas registradas aún</p>
+          ${window.STATE.isAdmin ? '<p style="font-size:.75rem;margin-top:4px;color:var(--text3)">Usa &quot;+ Nueva Semana&quot; para comenzar</p>' : ''}
+        </div>
+      </td>
+    </tr>`;
+
+  // Fila de totales por miembro
+  const totalRow = missions.length ? (() => {
+    const totals = members.map(m => {
+      // Solo contar misiones donde el miembro participó
+      const myMissions = missions.filter(ms => (ms.participants || members.map(x => x.id)).includes(m.id));
+      const cnt = myMissions.filter(ms => (ms.deliveries || {})[m.id] === 'entregado').length;
+      const pct = myMissions.length ? Math.round(cnt / myMissions.length * 100) : 0;
+      const col = myMissions.length === 0 ? 'var(--text3)' : pct === 100 ? '#2ecc71' : pct >= 50 ? 'var(--gold)' : '#e03535';
+      return `<td style="text-align:center;padding:8px 10px;border-top:2px solid var(--border)">
+        ${myMissions.length ? `<b style="color:${col};font-size:.85rem">${cnt}/${myMissions.length}</b><div style="font-size:.65rem;color:var(--text3);margin-top:2px">${pct}%</div>` : `<span style="color:var(--text3);font-size:.8rem">N/A</span>`}
+      </td>`;
+    }).join('');  
+    return `
+      <tfoot>
+        <tr style="background:rgba(212,160,23,.04)">
+          <td style="font-weight:700;color:var(--text2);font-size:.8rem;border-top:2px solid var(--border);padding:8px 12px;white-space:nowrap">
+            <i class="ri-bar-chart-line" style="color:var(--gold)"></i> TOTAL ENTREGAS
+          </td>
+          ${totals}
+          <td colspan="2" style="border-top:2px solid var(--border)"></td>
+        </tr>
+      </tfoot>`;
+  })() : '';
+
+  document.getElementById('content').innerHTML = `
+    ${styles}
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div style="padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <i class="ri-calendar-check-line" style="color:var(--gold);font-size:1.25rem"></i>
+        <b style="color:var(--gold-light);font-size:1rem;font-family:'Cinzel',serif">Registro de Misiones Semanales</b>
+        <span class="badge badge-gray" style="margin-left:auto">${missions.length} semana(s)</span>
+        <span class="badge badge-blue">${members.length} miembro(s)</span>
+      </div>
+      <div class="wm-wrap">
+        <table class="wm-table">
+          <thead>
+            <tr>
+              <th style="min-width:160px; text-align:left">Fecha de Entrega</th>
+              ${memberHeaders}
+              <th style="text-align:center; min-width:80px">Progreso</th>
+              <th style="width:40px"></th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+          ${totalRow}
+        </table>
+      </div>
+    </div>`;
+};
+
+// ── NUEVA SEMANA (modal) ─────────────────────────────────
+// Helper: toggle todos los checkboxes de participantes
+window._wmToggleAll = function () {
+  const boxes = document.querySelectorAll('.wm-chk');
+  const allChecked = [...boxes].every(b => b.checked);
+  boxes.forEach(b => b.checked = !allChecked);
+  const btn = document.getElementById('wm-toggle-all-btn');
+  if (btn) btn.textContent = allChecked ? 'Seleccionar todos' : 'Quitar todos';
+};
+
+window.addWeeklyMission = function () {
+  if (!window.STATE.isAdmin) return window.toast('Sin usuario solo puedes visualizar', 'error');
+  if (!window.STATE.members.length) return window.toast('Agrega miembros primero', 'error');
+
+  const today = new Date().toISOString().split('T')[0];
+  const memberRows = window.STATE.members.map(m => `
+    <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;
+      background:var(--bg3);border:1px solid var(--border);cursor:pointer;transition:background .15s"
+      onmouseover="this.style.background='var(--card-hover)'" onmouseout="this.style.background='var(--bg3)'">
+      <input type="checkbox" class="wm-chk" id="wm-chk-${m.id}" value="${m.id}" checked
+        style="width:18px;height:18px;accent-color:var(--gold);cursor:pointer;flex-shrink:0">
+      <span style="font-size:.88rem;font-weight:600;color:var(--text)">${m.nickname}</span>
+      ${m.class ? `<span style="font-size:.72rem;color:var(--text3);margin-left:auto">${m.class}</span>` : ''}
+    </label>`
+  ).join('');
+
+  window.openModal(
+    `<i class='ri-calendar-check-line'></i> Nueva Semana de Misión`,
+    `<div class="form-grid cols-1">
+       <div class="form-row">
+         <label>Fecha de Entrega</label>
+         <input type="date" id="f-wm-date" value="${today}">
+       </div>
+       <div class="form-row" style="gap:8px">
+         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+           <label style="color:var(--text2)!important;font-size:.78rem;text-transform:uppercase;letter-spacing:.5px">
+             <i class="ri-group-line" style="color:var(--gold)"></i> Participantes
+           </label>
+           <button id="wm-toggle-all-btn" type="button"
+             onclick="window._wmToggleAll()"
+             style="font-size:.72rem;padding:3px 10px;border-radius:5px;border:1px solid var(--border);
+                    background:var(--bg3);color:var(--text2);cursor:pointer;font-family:'Inter',sans-serif;
+                    transition:all .15s"
+             onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'"
+             onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
+             Quitar todos
+           </button>
+         </div>
+         <div style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;padding-right:4px">
+           ${memberRows}
+         </div>
+       </div>
+     </div>`,
+    async () => {
+      const date = document.getElementById('f-wm-date').value;
+      if (!date) { window.toast('Selecciona una fecha', 'error'); return false; }
+      const dup = window.STATE.weeklyMissions.find(m => m.date === date);
+      if (dup) { window.toast('Ya existe una semana con esa fecha', 'error'); return false; }
+      const participants = [...document.querySelectorAll('.wm-chk:checked')].map(b => b.value);
+      if (!participants.length) { window.toast('Selecciona al menos un participante', 'error'); return false; }
+      await window.saveFireDoc(`clans/${window.CLAN_ID}/weeklyMissions`, null, {
+        date,
+        participants,
+        deliveries: {}
+      });
+      window.toast(`Semana registrada con ${participants.length} participante(s) ✅`, 'success');
+    }
+  );
+};
+
+// ── TOGGLE ENTREGA ───────────────────────────────────────
+window.toggleDelivery = async function (missionId, memberId, val) {
+  if (!window.STATE.isAdmin) return window.toast('Sin permiso', 'error');
+  try {
+    // Dot-notation para actualizar solo ese campo del mapa
+    await window.saveFireDoc(
+      `clans/${window.CLAN_ID}/weeklyMissions`,
+      missionId,
+      { [`deliveries.${memberId}`]: val }
+    );
+    const ms = window.STATE.weeklyMissions.find(m => m.id === missionId);
+    if (ms) {
+      if (!ms.deliveries) ms.deliveries = {};
+      ms.deliveries[memberId] = val;
+    }
+  } catch (err) {
+    window.toast('Error al guardar: ' + err.message, 'error');
+    console.error(err);
+  }
+};
+
+// ── ELIMINAR SEMANA ──────────────────────────────────────
+window.delWeeklyMission = async function (id) {
+  if (!window.STATE.isAdmin) return window.toast('Sin permiso', 'error');
+  if (!confirm('¿Eliminar esta semana y todos sus registros de entrega?')) return;
+  try {
+    await window.delFireDoc(`clans/${window.CLAN_ID}/weeklyMissions`, id);
+    window.toast('Semana eliminada', 'info');
+  } catch (err) {
+    window.toast('Error al eliminar: ' + err.message, 'error');
+    console.error(err);
+  }
 };

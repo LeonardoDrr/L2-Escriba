@@ -1212,6 +1212,7 @@
             <div class="nav-item" data-page="desired"><i class="ri-heart-add-line"></i>Deseado <span class="nav-badge"
                     id="desired-badge" style="display:none; background: var(--green); color: #000;">0</span></div>
             <div class="nav-item admin-item" data-page="equipment"><i class="ri-shield-user-line"></i>Equipamiento</div>
+            <div class="nav-item admin-item" data-page="weeklyMissions"><i class="ri-calendar-check-line"></i>Misión Semanal</div>
             <div class="nav-section">Clan</div>
             <div class="nav-item" data-page="events"><i class="ri-sword-line"></i>Eventos</div>
             <div class="nav-section admin-section" style="margin-top:auto"><i class="ri-server-line"
@@ -1342,6 +1343,9 @@
         function dbUpdateMatStr(idx, val) { if (window.dbUpdateMatStr) window.dbUpdateMatStr(idx, val); }
         function dbUpdateMatNum(idx, val) { if (window.dbUpdateMatNum) window.dbUpdateMatNum(idx, val); }
         function openNewMatMiniModal(iId, lId, tempName, cb) { if (window.openNewMatMiniModal) window.openNewMatMiniModal(iId, lId, tempName, cb); }
+        function weeklyMissions() { if (window.weeklyMissions) window.weeklyMissions(); }
+        function toggleDelivery(missionId, memberId, val) { if (window.toggleDelivery) window.toggleDelivery(missionId, memberId, val); }
+        function delWeeklyMission(id) { if (window.delWeeklyMission) window.delWeeklyMission(id); }
     </script>
 
     <script>

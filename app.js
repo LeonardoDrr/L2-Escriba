@@ -30,6 +30,7 @@ let STATE = {
   desired: [],
   equipment: [],
   events: [],
+  weeklyMissions: [],
   globalItems: [],
   isAdmin: localStorage.getItem("adminAuth") === "true"
 };
@@ -88,6 +89,13 @@ async function loadAll() {
       if (STATE.page === "member-details") window.showMemberDetails();
     });
 
+    // 🎨 ESCUCHA EN VIVO: Misión Semanal
+    onSnapshot(collection(db, `clans/${CLAN_ID}/weeklyMissions`), (snap) => {
+      STATE.weeklyMissions = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+      if (STATE.page === "weeklyMissions") window.weeklyMissions();
+    });
+
     const [w, c, t, e, gi] = await Promise.all([
       getDocs(collection(db, `clans/${CLAN_ID}/warehouse`)),
       getDocs(collection(db, `clans/${CLAN_ID}/crafts`)),
@@ -134,11 +142,13 @@ window.members = members;   // ← exponer al scope global para que funcione onc
 const PAGE_TITLES = {
   dashboard: "Dashboard", members: "Miembros del Clan", warehouse: "Almacén del Clan",
   crafts: "Crafts & Materiales", treasury: "Tesorería", loans: "Préstamos & Deudas", desired: "Items Deseados", equipment: "Equipamiento de Miembros", events: "Eventos",
+  weeklyMissions: "Misión Semanal",
   dbmanager: "Gestor L2 DB Master", "member-details": "Perfil del Miembro"
 };
 const ADD_LABELS = {
   dashboard: "", members: "Nuevo Miembro", warehouse: "Nuevo Item", crafts: "Nuevo Craft",
   treasury: "Nueva Transacción", loans: "Nuevo Préstamo", desired: "Nuevo Deseo", equipment: "Añadir Equipamiento", events: "Nuevo Evento",
+  weeklyMissions: "Nueva Semana",
   dbmanager: "Nuevo Item L2"
 };
 
@@ -189,6 +199,7 @@ function navigate(page) {
     desired: window.desired,
     equipment: window.equipment,
     events: window.events,
+    weeklyMissions: window.weeklyMissions,
     dbmanager: window.dbmanager,
     'member-details': window.showMemberDetails
   };
@@ -206,6 +217,7 @@ window.handleAddClick = () => {
     desired: window.addDesired,
     equipment: window.addEquipment,
     events: window.addEvent,
+    weeklyMissions: window.addWeeklyMission,
     dbmanager: window.addGlobalItem
   };
   (fns[STATE.page] || (() => { }))();
