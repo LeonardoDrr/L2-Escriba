@@ -41,19 +41,30 @@ window.warehouse = function () {
       </td>
     </tr>`).join("") || `<tr><td colspan="7"><div class="empty-state"><i class="ri-archive-2-line"></i><p>Almacén vacío</p></div></td></tr>`;
 
-  document.getElementById("content").innerHTML = `
+  const contentEl = document.getElementById("content");
+  if (document.getElementById("wh-q")) {
+    const tbody = contentEl.querySelector("tbody");
+    if (tbody) {
+      tbody.innerHTML = rows;
+      const countEl = contentEl.querySelector(".filters span");
+      if (countEl) countEl.innerText = `${list.length} item(s)`;
+      return;
+    }
+  }
+
+  contentEl.innerHTML = `
     <div class="filters">
       <input class="search-input" id="wh-q" placeholder="🔍 Buscar item..." oninput="warehouse()" value="${q}">
       <select class="filter-sel" id="wh-cat" onchange="warehouse()">
-        <option value="">Todas las categorías</option>
+        <option value="" ${fc === "" ? "selected" : ""}>Todas las categorías</option>
         ${WH_CATS.map(c => `<option value="${c}" ${c === fc ? "selected" : ""}>${CATEGORY_LABELS[c] || c}</option>`).join("")}
       </select>
       <select class="filter-sel" id="wh-grade" onchange="warehouse()">
-        <option value="">Todos los grados</option>
+        <option value="" ${fg === "" ? "selected" : ""}>Todos los grados</option>
         ${WH_GRADES.map(g => `<option value="${g}" ${g === fg ? "selected" : ""}>${g}</option>`).join("")}
       </select>
       <select class="filter-sel" id="wh-owner" onchange="warehouse()">
-        <option value="">Todos los dueños</option><option value="clan">Clan</option>
+        <option value="" ${fo === "" ? "selected" : ""}>Todos los dueños</option><option value="clan" ${fo === "clan" ? "selected" : ""}>Clan</option>
         ${window.STATE.members.map(m => `<option value="${m.id}" ${m.id === fo ? "selected" : ""}>${m.nickname}</option>`).join("")}
       </select>
       <span style="margin-left:auto;color:var(--text3);font-size:.8rem">${list.length} item(s)</span>
@@ -390,12 +401,25 @@ window.crafts = function () {
     </div>`;
   }).join("") || `<div class="empty-state"><i class="ri-hammer-line"></i><p>No hay crafts registrados. Crea uno con el botón + Nuevo.</p></div>`;
 
-  document.getElementById("content").innerHTML = `
+  const contentEl = document.getElementById("content");
+  if (document.getElementById("cr-q")) {
+    const listWrap = document.getElementById("crafts-list-wrap");
+    if (listWrap) {
+      listWrap.innerHTML = cards;
+      const countEl = contentEl.querySelector(".filters span");
+      if (countEl) countEl.innerText = `${list.length} craft(s)`;
+      return;
+    }
+  }
+
+  contentEl.innerHTML = `
     <div class="filters">
       <input class="search-input" id="cr-q" placeholder="🔍 Buscar craft..." oninput="crafts()" value="${q}">
       <select class="filter-sel" id="cr-status" onchange="crafts()">
-        <option value="">Todos</option><option value="active">En Progreso</option>
-        <option value="completed">Completado</option><option value="cancelled">Cancelado</option>
+        <option value="" ${fs === "" ? "selected" : ""}>Todos</option>
+        <option value="active" ${fs === "active" ? "selected" : ""}>En Progreso</option>
+        <option value="completed" ${fs === "completed" ? "selected" : ""}>Completado</option>
+        <option value="cancelled" ${fs === "cancelled" ? "selected" : ""}>Cancelado</option>
       </select>
       <span style="margin-left:auto;color:var(--text3);font-size:.8rem">${list.length} craft(s)</span>
     </div>
@@ -403,7 +427,7 @@ window.crafts = function () {
       <i class="ri-information-line" style="color:var(--gold-dark)"></i>
       Haz clic en una tarjeta para ver el árbol de crafteo detallado con explicaciones y multiplicadores.
     </div>
-    ${cards}`;
+    <div id="crafts-list-wrap">${cards}</div>`;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

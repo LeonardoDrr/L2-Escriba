@@ -678,21 +678,33 @@ function members() {
   }).join("") || `<tr><td colspan="7"><div class="empty-state"><i class="ri-group-line"></i><p>No hay miembros registrados</p></div></td></tr>`;
 
   // 3. Renderizar
-  document.getElementById("content").innerHTML = `
+  const contentEl = document.getElementById("content");
+  
+  if (document.getElementById("mem-search")) {
+    const tbody = contentEl.querySelector("tbody");
+    if (tbody) {
+      tbody.innerHTML = rows;
+      const countEl = contentEl.querySelector(".filters span");
+      if (countEl) countEl.innerText = `${list.length} miembro(s)`;
+      return;
+    }
+  }
+
+  contentEl.innerHTML = `
     <div class="filters">
-      <input class="search-input" id="mem-search" placeholder="🔍 Buscar miembro..." oninput="members()" value="">
+      <input class="search-input" id="mem-search" placeholder="🔍 Buscar miembro..." oninput="members()" value="${q}">
       <select class="filter-sel" id="mem-status" onchange="members()">
-        <option value="">Todos los estados</option>
-        <option value="active">Activo</option>
-        <option value="inactive">Inactivo</option>
-        <option value="absent">Ausente</option>
+        <option value="" ${fs === "" ? "selected" : ""}>Todos los estados</option>
+        <option value="active" ${fs === "active" ? "selected" : ""}>Activo</option>
+        <option value="inactive" ${fs === "inactive" ? "selected" : ""}>Inactivo</option>
+        <option value="absent" ${fs === "absent" ? "selected" : ""}>Ausente</option>
       </select>
       <select class="filter-sel" id="mem-role" onchange="members()">
-        <option value="">Todos los roles</option>
-        <option value="leader">Líder</option>
-        <option value="guardian">Guardián</option>
-        <option value="escriba">Escriba</option>
-        <option value="member">Miembro</option>
+        <option value="" ${fr === "" ? "selected" : ""}>Todos los roles</option>
+        <option value="leader" ${fr === "leader" ? "selected" : ""}>Líder</option>
+        <option value="guardian" ${fr === "guardian" ? "selected" : ""}>Guardián</option>
+        <option value="escriba" ${fr === "escriba" ? "selected" : ""}>Escriba</option>
+        <option value="member" ${fr === "member" ? "selected" : ""}>Miembro</option>
       </select>
       <span style="margin-left:auto;color:var(--text3);font-size:.8rem">${list.length} miembro(s)</span>
     </div>
@@ -702,11 +714,6 @@ function members() {
         <tbody>${rows}</tbody>
       </table>
     </div>`;
-
-  // 4. ⬅ RESTAURAR valores de filtros DESPUÉS del render (esto es lo que faltaba)
-  document.getElementById("mem-search").value = q;
-  document.getElementById("mem-status").value = fs;
-  document.getElementById("mem-role").value = fr;
 }
 
 function memberFormHTML(m = {}) {
