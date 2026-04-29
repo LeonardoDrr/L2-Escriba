@@ -410,7 +410,7 @@ window.crafts = function () {
 // CRAFT DETAIL — Vista completa con árbol, multiplicador y notas
 // ─────────────────────────────────────────────────────────────────────────────
 
-function buildCraftTreeNode(itemName, qty, path, depth, whPool) {
+function buildCraftTreeNode(itemName, qty, absoluteQty, path, depth, whPool) {
   const recipe = getRecipeFor(itemName);
   const itemNameLower = itemName.toLowerCase();
 
@@ -434,7 +434,9 @@ function buildCraftTreeNode(itemName, qty, path, depth, whPool) {
   const node = {
     name: itemName,
     qty,
+    absoluteQty,
     whAmt: fullWhAmt,
+    allocatedFromPool: usedFromPool,
     craftQty,
     path: [...path],
     depth,
@@ -445,7 +447,7 @@ function buildCraftTreeNode(itemName, qty, path, depth, whPool) {
 
   if (!isBase && !isNonCraft && depth < 8) {
     for (const mat of recipe) {
-      node.children.push(buildCraftTreeNode(mat.name, mat.needed * craftQty, [...path, itemName], depth + 1, whPool));
+      node.children.push(buildCraftTreeNode(mat.name, mat.needed * craftQty, mat.needed * absoluteQty, [...path, itemName], depth + 1, whPool));
     }
   }
   return node;
@@ -505,16 +507,40 @@ function renderCraftNode(node, isRoot) {
 
   const opacity = node.qty === 0 ? '0.45' : '1';
 
+  let detailsHTML = `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:.75rem;margin-top:2px;">`;
+
+  if (node.absoluteQty !== node.qty) {
+    detailsHTML += `<div style="color:var(--text3); font-size:.65rem;" title="Total absoluto si no tuvieras nada en almacén">Total Neto de Receta: <b>${node.absoluteQty}</b></div>`;
+  }
+  
+  detailsHTML += `<div style="font-size:.85rem; font-weight:bold; color:var(--text);" title="Lo que realmente pide el crafteo superior tras usar el almacén">Requerido: <b>×${node.qty}</b></div>`;
+
+  if (node.whAmt > 0) {
+    const allocColor = node.allocatedFromPool > 0 ? 'var(--green)' : 'var(--text3)';
+    detailsHTML += `<div style="color:${allocColor}">📦 Almacén usado: <b>${node.allocatedFromPool}</b> <span style="font-size:.65rem">(de ${node.whAmt} total)</span></div>`;
+  } else {
+    detailsHTML += `<div style="color:var(--text3);font-size:.7rem">📦 Almacén: 0</div>`;
+  }
+
+  if (node.craftQty > 0) {
+    const actionColor = node.isNonCraft ? 'var(--red)' : 'var(--gold-light)';
+    const actionText = node.isNonCraft ? '🩸 A Farmear (Faltan)' : '🔨 A Craftear';
+    detailsHTML += `<div style="color:${actionColor}; font-weight:bold; background:rgba(0,0,0,0.2); padding:2px 6px; border-radius:4px;">${actionText}: ${node.craftQty}</div>`;
+  } else if (node.qty > 0) {
+    detailsHTML += `<div style="color:var(--green); font-weight:bold; background:rgba(46,204,113,0.1); padding:2px 6px; border-radius:4px;">✅ Completado por Almacén</div>`;
+  } else {
+    detailsHTML += `<div style="color:var(--text3); font-weight:bold; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px;">No requerido</div>`;
+  }
+
+  detailsHTML += `</div>`;
+
   return `<div class="ct-node" style="opacity:${opacity}">
       ${pathHTML}
       <div class="${headerClass}" ${hasChildren ? `onclick="ctToggle('${nodeId}')"` : ''}>
         ${toggleIcon}
         <span class="ct-item-name">${node.name}</span>
         ${typeBadge}
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
-          <span class="ct-qty">×${node.qty}</span>
-          <span class="ct-wh-info" style="color:${whColor}">Almacén: ${node.whAmt} ${whOk ? `(Sobran ${node.whAmt - node.qty}) ✓` : `(Faltan ${node.qty - node.whAmt})`}</span>
-        </div>
+        ${detailsHTML}
       </div>
       ${childrenHTML}
     </div>`;
@@ -560,7 +586,7 @@ window.viewCraftDetail = function(craftId, mult) {
 
   const treeNodes = mats.map(m => {
     const qty = Number(m.needed || 1) * multiplier;
-    return buildCraftTreeNode(m.name, qty, [c.targetItem], 1, whPoolTree);
+    return buildCraftTreeNode(m.name, qty, qty, [c.targetItem], 1, whPoolTree);
   });
 
   const treeRootsHTML = treeNodes.length > 0 ? treeNodes.map(node => {
@@ -575,7 +601,8 @@ window.viewCraftDetail = function(craftId, mult) {
   // Calculate absolute base cost for maxCraftsPossible
   const absoluteBaseCost = {};
   mats.forEach(m => {
-    const node = buildCraftTreeNode(m.name, Number(m.needed || 1), [], 0);
+    const qty = Number(m.needed || 1);
+    const node = buildCraftTreeNode(m.name, qty, qty, [], 0);
     collectBaseLeaves(node, absoluteBaseCost);
   });
   
@@ -762,7 +789,8 @@ window.viewCraftDetail = function(craftId, mult) {
                localPool[name] = (localPool[name] || 0) + Number(i.quantity || 0);
             });
             mats.forEach(m => {
-              const node = buildCraftTreeNode(m.name, Number(m.needed || 1) * n, [], 0, localPool);
+              const qty = Number(m.needed || 1) * n;
+              const node = buildCraftTreeNode(m.name, qty, qty, [], 0, localPool);
               collectBaseLeaves(node, scaledBase);
             });
             const totalPieces = Object.values(scaledBase).filter(x => x.qty > 0).reduce((s, x) => s + x.qty, 0);
