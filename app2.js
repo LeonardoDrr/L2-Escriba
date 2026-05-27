@@ -270,6 +270,11 @@ window.acSelect = (inputId, listId, name) => {
       window.updEquipmentItemName(idx, name);
     }
   }
+
+  // Si es un ítem de adquisición de tesorería, sugerir precio global si existe
+  if (inputId === 'f-txitem' && window.hintGlobalPrice) {
+    window.hintGlobalPrice(name);
+  }
 };
 
 // Autocomplete especial para Crafts — auto-rellena materiales si hay receta
@@ -1112,12 +1117,33 @@ window.treasury = function () {
     const typeLabel = isItem ? "<span class='badge badge-gold'>Item L2</span>" : "<span class='badge badge-blue'>Adena</span>";
     const amountHtml = isItem ? "—" : `<span style="font-weight:600;color:var(--gold-light)">${window.fmt(t.amount)} ₳</span>`;
     
+    const acq = (window.STATE.acquisitions || []).find(a => a.treasuryId === t.id);
+    let ptsHtml = "—";
+    if (isItem) {
+      if (acq) {
+        ptsHtml = `<div style="font-size:0.85rem;color:var(--green); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <i class="ri-checkbox-circle-line"></i> Asignado a <b>${window.memberName ? window.memberName(acq.memberId) : acq.memberId}</b> por <b>${acq.pointsCost} pts</b>
+          ${window.STATE.isAdmin ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="window.unassignItem('${acq.id}')" title="Desasignar Item" style="color:var(--red); padding:2px; height:auto; width:auto; display:inline-flex; align-items:center; justify-content:center;"><i class="ri-close-circle-line" style="font-size:1.15rem"></i></button>` : ''}
+        </div>`;
+      } else {
+        const ptsVal = t.pointsValue || 0;
+        if (ptsVal > 0) {
+          ptsHtml = `<div style="display:flex; align-items:center; gap:8px;">
+            <span class="badge badge-purple">${ptsVal} pts</span>
+            ${window.STATE.isAdmin ? `<button class="btn btn-ghost btn-sm" onclick="window.assignItem('${t.id}')" style="padding:2px 6px; border:1px solid var(--border); font-size:0.75rem;"><i class="ri-user-shared-line"></i> Asignar</button>` : ''}
+          </div>`;
+        } else {
+          ptsHtml = `<span style="color:var(--text3)">Sin precio</span>`;
+        }
+      }
+    }
+    
     return `
     <tr>
       <td>${window.fmtDate(t.date)}</td>
       <td>${typeLabel}</td>
       <td>${t.description || "—"}${itemBadge}</td>
-      <td style="color:var(--text2)">Adquirido del Clan Principal</td>
+      <td>${ptsHtml}</td>
       <td>${amountHtml}</td>
       <td style="display:flex;gap:4px">
         ${window.STATE.isAdmin ? `
@@ -1131,6 +1157,7 @@ window.treasury = function () {
   document.getElementById("content").innerHTML = `
     <div class="stats-grid" style="margin-bottom:16px">
       <div class="stat-card"><div class="stat-icon">📜</div><div class="stat-label">Total Adquisiciones Registradas</div><div class="stat-value" style="color:var(--gold-light);font-size:1.1rem">${window.STATE.treasury.length}</div></div>
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-label">Items Asignados</div><div class="stat-value" style="color:var(--green);font-size:1.1rem">${(window.STATE.acquisitions || []).length}</div></div>
     </div>
     <div class="filters">
       <input class="search-input" id="tr-q" placeholder="🔍 Buscar..." oninput="treasury()" value="${q}">
@@ -1141,7 +1168,7 @@ window.treasury = function () {
       </select>
     </div>
     <div class="table-wrap"><table>
-      <thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción / Item</th><th>Origen</th><th>Monto</th><th></th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción / Item</th><th>Pts</th><th>Monto</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
 };
@@ -1150,9 +1177,17 @@ window.toggleTxFields = function() {
   const t = document.getElementById("f-txtype")?.value;
   const wAmt = document.getElementById("wrap-txamt");
   const wItm = document.getElementById("wrap-txitem");
+  const wPts = document.getElementById("wrap-txpts");
   if (wAmt && wItm) {
-    if (t === 'adena') { wAmt.style.display = 'block'; wItm.style.display = 'none'; }
-    else { wAmt.style.display = 'none'; wItm.style.display = 'block'; }
+    if (t === 'adena') {
+      wAmt.style.display = 'block';
+      wItm.style.display = 'none';
+      if (wPts) wPts.style.display = 'none';
+    } else {
+      wAmt.style.display = 'none';
+      wItm.style.display = 'block';
+      if (wPts) wPts.style.display = 'block';
+    }
   }
 };
 
@@ -1171,17 +1206,21 @@ function treasuryFormHTML(t = {}) {
       <div class="form-row"><label>Tipo de Adquisición</label>
         <select id="f-txtype" onchange="window.toggleTxFields()">
           <option value="adena" ${type === "adena" ? "selected" : ""}>Adena</option>
-          <option value="item" ${type === "item" ? "selected" : ""}>Items L2</option>
+          <option value="item" ${type === "item" ? "selected" : ""}>Item L2 (Drop / Boss)</option>
         </select>
       </div>
       <div class="form-row" id="wrap-txamt" style="display: ${type === 'adena' ? 'block' : 'none'};"><label>Monto (Adena)</label><input id="f-txamt" type="number" min="0" placeholder="0" value="${amount}"></div>
-      <div class="form-row col2" id="wrap-txitem" style="display: ${type === 'item' ? 'block' : 'none'};"><label>Item Adquirido / Importante</label>
+      <div class="form-row col2" id="wrap-txitem" style="display: ${type === 'item' ? 'block' : 'none'};"><label>Item Adquirido</label>
         <div class="autocomplete-wrap">
-          <input type="text" id="f-txitem" value="${itemName}" placeholder="Buscar item L2..." autocomplete="off" oninput="acSearch(this.value, 'f-txitem', 'ac-tx-item')">
+          <input type="text" id="f-txitem" value="${itemName}" placeholder="Buscar item L2..." autocomplete="off" oninput="acSearch(this.value, 'f-txitem', 'ac-tx-item')" onblur="if(window.hintGlobalPrice) window.hintGlobalPrice(this.value)">
           <div class="autocomplete-list" id="ac-tx-item"></div>
         </div>
       </div>
-      <div class="form-row col2"><label>Descripción / Concepto (Opcional)</label><input id="f-txdesc" value="${desc}" placeholder="Ej: Drop de Boss, Venta grupal..."></div>
+      <div class="form-row col2" id="wrap-txpts" style="display: ${type === 'item' ? 'block' : 'none'};">
+        <label>Valor en Puntos <span style="color:var(--text3); font-size:0.8rem;">(0 = Sin precio / No canjeable)</span></label>
+        <input id="f-txpts" type="number" min="0" value="${t.pointsValue || 0}" placeholder="0">
+      </div>
+      <div class="form-row col2"><label>Descripción / Concepto <span style="color:var(--text3); font-size:0.8rem;">(Opcional)</span></label><input id="f-txdesc" value="${desc}" placeholder="Ej: Drop de Boss, Venta grupal..."></div>
       <div class="form-row col2"><label>Fecha</label><input id="f-txdate" type="date" value="${date}"></div>
     </div>`;
 }
@@ -1191,6 +1230,7 @@ function gatherTreasuryData() {
   const amt = type === 'adena' ? +document.getElementById("f-txamt").value : 0;
   const itemName = type === 'item' ? document.getElementById("f-txitem").value.trim() : "";
   const desc = document.getElementById("f-txdesc").value.trim();
+  const ptsVal = type === 'item' ? +document.getElementById("f-txpts").value || 0 : 0;
   
   if (type === 'adena' && !amt) {
      window.toast("Ingresa un monto de Adena válido", "error"); return null;
@@ -1200,8 +1240,11 @@ function gatherTreasuryData() {
   }
   
   return {
-    type: type, amount: amt, description: desc,
+    type: type,
+    amount: amt,
+    description: desc,
     itemName: itemName,
+    pointsValue: ptsVal,
     memberId: "clan", // Fixed to always be Clan instead of a member
     date: document.getElementById("f-txdate").value
   };
@@ -1209,13 +1252,19 @@ function gatherTreasuryData() {
 
 window.addTransaction = function () {
   if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
-  window.openModal("<i class='ri-coins-line'></i> Nueva Transacción",
+  window.openModal("<i class='ri-shopping-bag-3-line'></i> Nueva Adquisición",
     treasuryFormHTML(),
     async () => {
       const data = gatherTreasuryData(); if (!data) return false;
       const id = await window.saveFireDoc(`clans/${window.CLAN_ID}/treasury`, null, data);
       window.STATE.treasury.push({ id, ...data });
-      window.toast("Guardado", "success"); window.treasury();
+      window.toast("Guardado", "success"); 
+      window.treasury();
+      
+      // Lógica de Precio Global
+      if (data.type === 'item' && data.itemName && data.pointsValue > 0) {
+        setTimeout(() => window.offerGlobalPrice(data.itemName, data.pointsValue), 200);
+      }
     }
   );
 };
@@ -1223,11 +1272,17 @@ window.addTransaction = function () {
 window.editTx = function (id) {
   if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
   const t = window.STATE.treasury.find(x => x.id === id); if (!t) return;
-  window.openModal(`<i class='ri-edit-2-line'></i> Editar Transacción`, treasuryFormHTML(t), async () => {
+  window.openModal(`<i class='ri-edit-2-line'></i> Editar Adquisición`, treasuryFormHTML(t), async () => {
     const data = gatherTreasuryData(); if (!data) return false;
     await window.saveFireDoc(`clans/${window.CLAN_ID}/treasury`, id, data);
     Object.assign(t, data);
-    window.toast("Transacción actualizada", "success"); window.treasury();
+    window.toast("Transacción actualizada", "success"); 
+    window.treasury();
+    
+    // Lógica de Precio Global
+    if (data.type === 'item' && data.itemName && data.pointsValue > 0) {
+      setTimeout(() => window.offerGlobalPrice(data.itemName, data.pointsValue), 200);
+    }
   });
 };
 
@@ -1237,6 +1292,144 @@ window.delTx = async (id) => {
   await window.delFireDoc(`clans/${window.CLAN_ID}/treasury`, id);
   window.STATE.treasury = window.STATE.treasury.filter(t => t.id !== id);
   window.toast("Eliminada", "info"); window.treasury();
+};
+
+window.offerGlobalPrice = async function (itemName, newPointsValue) {
+  const matches = (window.STATE.treasury || []).filter(t => 
+    t.itemName && 
+    t.itemName.toLowerCase() === itemName.toLowerCase() && 
+    t.pointsValue !== newPointsValue
+  );
+
+  if (matches.length > 0) {
+    if (confirm(`¿Deseas aplicar el precio de ${newPointsValue} pts a los otros ${matches.length} registros de "${itemName}" existentes?`)) {
+      for (const item of matches) {
+        item.pointsValue = newPointsValue;
+        await window.saveFireDoc(`clans/${window.CLAN_ID}/treasury`, item.id, { pointsValue: newPointsValue });
+      }
+      window.toast(`Se actualizó el precio de ${matches.length} items a ${newPointsValue} pts`, "success");
+      window.treasury();
+    }
+  }
+};
+
+window.hintGlobalPrice = function (itemName) {
+  if (!itemName) return;
+  const match = (window.STATE.treasury || []).find(t => 
+    t.itemName && 
+    t.itemName.toLowerCase() === itemName.toLowerCase() && 
+    t.pointsValue > 0
+  );
+  if (match) {
+    const ptsInput = document.getElementById("f-txpts");
+    if (ptsInput) {
+      ptsInput.value = match.pointsValue;
+      window.toast(`Precio sugerido de "${match.itemName}": ${match.pointsValue} pts`, "info");
+    }
+  }
+};
+
+window.updateAssignMemberPoints = function () {
+  const memberId = document.getElementById("f-as-member").value;
+  const ptsContainer = document.getElementById("as-member-pts");
+  if (!ptsContainer) return;
+  
+  if (!memberId) {
+    ptsContainer.innerHTML = "Selecciona un miembro";
+    ptsContainer.style.color = "var(--text3)";
+    return;
+  }
+  
+  const ptsInfo = window.getMemberPoints(memberId);
+  const cost = window._currentItemAssignCost || 0;
+  const remaining = ptsInfo.balance - cost;
+  
+  if (remaining >= 0) {
+    ptsContainer.innerHTML = `Saldo actual: ${ptsInfo.balance} pts <br> <span style="color:var(--green)">Quedará en: ${remaining} pts (Suficiente) ✅</span>`;
+    ptsContainer.style.color = "var(--green)";
+  } else {
+    ptsContainer.innerHTML = `Saldo actual: ${ptsInfo.balance} pts <br> <span style="color:var(--red)">Faltan: ${Math.abs(remaining)} pts (Insuficiente) ❌</span>`;
+    ptsContainer.style.color = "var(--red)";
+  }
+};
+
+window.assignItem = function (treasuryId) {
+  const item = window.STATE.treasury.find(t => t.id === treasuryId);
+  if (!item) return;
+  
+  window._currentItemAssignCost = item.pointsValue || 0;
+  
+  window.openModal(
+    `<i class='ri-user-shared-line'></i> Asignar Item: ${item.itemName}`,
+    `
+      <div class="form-grid">
+        <div class="form-row col2">
+          <label>Seleccionar Miembro</label>
+          <select id="f-as-member" onchange="window.updateAssignMemberPoints()">
+            <option value="">-- Seleccionar --</option>
+            ${window.STATE.members.map(m => `<option value="${m.id}">${m.nickname} (${m.class})</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-row col2">
+          <label>Costo del Item</label>
+          <div style="font-size:1.1rem; font-weight:bold; color:var(--gold-light)">${item.pointsValue} pts</div>
+        </div>
+        <div class="form-row col2">
+          <label>Saldo de Puntos del Miembro</label>
+          <div id="as-member-pts" style="font-size:0.95rem; font-weight:bold; color:var(--text3)">
+            Selecciona un miembro
+          </div>
+        </div>
+        <div class="form-row col2">
+          <label>Fecha de Entrega</label>
+          <input id="f-as-date" type="date" value="${new Date().toLocaleDateString('en-CA')}">
+        </div>
+      </div>
+    `,
+    async () => {
+      const memberId = document.getElementById("f-as-member").value;
+      const date = document.getElementById("f-as-date").value;
+      if (!memberId) {
+        window.toast("Debes seleccionar un miembro", "error");
+        return false;
+      }
+      
+      const ptsInfo = window.getMemberPoints(memberId);
+      if (ptsInfo.balance < item.pointsValue) {
+        window.toast(`Puntos insuficientes. Al miembro le faltan ${item.pointsValue - ptsInfo.balance} pts`, "error");
+        return false;
+      }
+      
+      const data = {
+        treasuryId: item.id,
+        itemName: item.itemName,
+        memberId: memberId,
+        pointsCost: item.pointsValue,
+        deliveredAt: date
+      };
+      
+      try {
+        await window.saveFireDoc(`clans/${window.CLAN_ID}/acquisitions`, null, data);
+        window.toast(`¡Item asignado con éxito a ${window.memberName ? window.memberName(memberId) : memberId}!`, "success");
+        window.treasury();
+      } catch (err) {
+        window.toast("Error al guardar asignación: " + err.message, "error");
+      }
+    }
+  );
+};
+
+window.unassignItem = async function (acquisitionId) {
+  if (!window.STATE.isAdmin) return window.toast("Sin usuario solo puedes visualizar", "error");
+  if (!confirm("¿Estás seguro de que deseas desasignar este item? El miembro recuperará los puntos.")) return;
+  
+  try {
+    await window.delFireDoc(`clans/${window.CLAN_ID}/acquisitions`, acquisitionId);
+    window.toast("Item desasignado correctamente", "info");
+    window.treasury();
+  } catch (err) {
+    window.toast("Error al eliminar asignación: " + err.message, "error");
+  }
 };
 
 // ── LOANS ───────────────────────────────────────────────

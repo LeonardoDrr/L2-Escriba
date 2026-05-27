@@ -32,6 +32,7 @@ let STATE = {
   events: [],
   weeklyMissions: [],
   globalItems: [],
+  acquisitions: [],
   isAdmin: localStorage.getItem("adminAuth") === "true"
 };
 let modalCallback = null;
@@ -96,6 +97,13 @@ async function loadAll() {
       if (STATE.page === "weeklyMissions") window.weeklyMissions();
     });
 
+    // 🎨 ESCUCHA EN VIVO: Adquisiciones canjeadas
+    onSnapshot(collection(db, `clans/${CLAN_ID}/acquisitions`), (snap) => {
+      STATE.acquisitions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (STATE.page === "member-details") window.showMemberDetails();
+      if (STATE.page === "treasury") window.treasury();
+    });
+
     const [w, c, t, e, gi] = await Promise.all([
       getDocs(collection(db, `clans/${CLAN_ID}/warehouse`)),
       getDocs(collection(db, `clans/${CLAN_ID}/crafts`)),
@@ -124,6 +132,23 @@ async function saveDoc(colPath, id, data) {
 }
 async function delDoc(colPath, id) { await deleteDoc(doc(db, colPath, id)); }
 
+function getMemberPoints(memberId) {
+  const evs = STATE.events.filter(e => (e.participants || []).some(p => p.memberId === memberId));
+  const earned = evs.reduce((sum, e) => {
+    const p = e.participants.find(x => x.memberId === memberId);
+    return sum + (p ? +p.points : 0);
+  }, 0);
+
+  const acqs = (STATE.acquisitions || []).filter(a => a.memberId === memberId);
+  const spent = acqs.reduce((sum, a) => sum + (+a.pointsCost || 0), 0);
+
+  return {
+    earned,
+    spent,
+    balance: earned - spent
+  };
+}
+
 // ── GLOBAL EXPORTS (consumed by app2.js) ─────────────────
 window.STATE = STATE;
 window.CLAN_ID = CLAN_ID;
@@ -133,6 +158,7 @@ window.memberName = memberName;
 window.memberOptions = memberOptions;
 window.updateLoansBadge = updateLoansBadge;
 window.updateDesiredBadge = updateDesiredBadge;
+window.getMemberPoints = getMemberPoints;
 window.saveFireDoc = saveDoc;
 window.delFireDoc = delDoc;
 window.openModal = openModal;
@@ -141,13 +167,13 @@ window.members = members;   // ← exponer al scope global para que funcione onc
 // ── NAV ──────────────────────────────────────────────────
 const PAGE_TITLES = {
   dashboard: "Dashboard", members: "Miembros del Clan", warehouse: "Almacén del Clan",
-  crafts: "Crafts & Materiales", treasury: "Tesorería", loans: "Préstamos & Deudas", desired: "Items Deseados", equipment: "Equipamiento de Miembros", events: "Eventos",
+  crafts: "Crafts & Materiales", treasury: "Adquisiciones del Clan", loans: "Préstamos & Deudas", desired: "Items Deseados", equipment: "Equipamiento de Miembros", events: "Eventos",
   weeklyMissions: "Misión Semanal",
   dbmanager: "Gestor L2 DB Master", "member-details": "Perfil del Miembro"
 };
 const ADD_LABELS = {
   dashboard: "", members: "Nuevo Miembro", warehouse: "Nuevo Item", crafts: "Nuevo Craft",
-  treasury: "Nueva Transacción", loans: "Nuevo Préstamo", desired: "Nuevo Deseo", equipment: "Añadir Equipamiento", events: "Nuevo Evento",
+  treasury: "Nueva Adquisición", loans: "Nuevo Préstamo", desired: "Nuevo Deseo", equipment: "Añadir Equipamiento", events: "Nuevo Evento",
   weeklyMissions: "Nueva Semana",
   dbmanager: "Nuevo Item L2"
 };
@@ -884,12 +910,16 @@ window.showMemberDetails = function (id) {
   const ds = window.STATE.desired.filter(d => d.memberId === id);
   // 3. Eventos y Puntos
   const evs = window.STATE.events.filter(e => (e.participants || []).some(p => p.memberId === id));
-  const totalPts = evs.reduce((sum, e) => {
-    const p = e.participants.find(x => x.memberId === id);
-    return sum + (p ? +p.points : 0);
-  }, 0);
+  const ptsInfo = window.getMemberPoints(id);
+  const totalPts = ptsInfo.earned;
+  const spentPts = ptsInfo.spent;
+  const netBalance = ptsInfo.balance;
+  
   // 4. Préstamos (donde sea destino o origen)
   const ln = window.STATE.loans.filter(l => l.fromId === id || l.toId === id);
+
+  // 5. Adquisiciones (Items canjeados)
+  const memberAcquisitions = (window.STATE.acquisitions || []).filter(a => a.memberId === id);
 
   const nobleBadge = m.isNoble ? `<span class="badge badge-gold"><i class="ri-vip-diamond-fill"></i> Noble</span>` : "";
   const roleBadge = m.clanRole === "leader" ? "Líder" : m.clanRole === "guardian" ? "Guardián" : m.clanRole === "escriba" ? "Escriba" : "Miembro";
@@ -916,6 +946,12 @@ window.showMemberDetails = function (id) {
           <span style="color:var(--gold)">${m.class}</span> — ${roleBadge}
         </div>
         <div>${subsHtml}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:0.8rem; color:var(--text3); margin-bottom:4px;">Saldo de Puntos</div>
+        <div class="badge ${netBalance >= 0 ? 'badge-green' : 'badge-red'}" style="font-size:1.1rem; padding:6px 12px; font-weight:bold;">
+          ${window.fmt(netBalance)} <span style="font-size:0.8rem; font-weight:normal; margin-left:2px;">pts</span>
+        </div>
       </div>
     </div>
     
@@ -951,18 +987,18 @@ window.showMemberDetails = function (id) {
         `).join("") : `<div class="empty-state" style="padding:20px 0"><p>Sin ítems deseados</p></div>`}
       </div>
 
-      <!-- EVENTOS -->
+      <!-- EVENTOS (PUNTOS GANADOS) -->
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">
           <b style="color:var(--gold-light)"><i class="ri-calendar-event-line"></i> Eventos Recientes</b>
-          <span class="badge badge-purple" style="font-size:0.85rem">Total: ${window.fmt(totalPts)} <small>pts</small></span>
+          <span class="badge badge-purple" style="font-size:0.85rem">Ganados: ${window.fmt(totalPts)} <small>pts</small></span>
         </div>
         ${evs.length ? evs.slice(-5).reverse().map(e => {
           const pt = e.participants.find(x => x.memberId === m.id).points;
           return `<div style="padding:6px 0; border-bottom:1px dashed var(--border); display:flex; justify-content:space-between; align-items:center;">
             <span style="color:var(--text2); font-size:0.85rem">${e.date ? window.fmtDate(e.date) : ''}</span>
             <span style="flex:1; margin-left:10px">${e.name}</span>
-            <b style="color:var(--gold-light)">+${pt}</b>
+            <b style="color:var(--gold-light)">+${pt} pts</b>
           </div>`;
         }).join("") : `<div class="empty-state" style="padding:20px 0"><p>Sin asistencia a eventos</p></div>`}
       </div>
@@ -984,11 +1020,41 @@ window.showMemberDetails = function (id) {
             <div style="text-align:right">
                <div style="color:${color}; font-weight:bold; font-size:0.9rem">${label}</div>
                <div style="font-size:0.7rem; color:var(--text3); text-transform:uppercase">${l.status}</div>
-            </div>
+             </div>
           </div>`;
         }).join("") : `<div class="empty-state" style="padding:20px 0"><p>Sin préstamos ni deudas</p></div>`}
       </div>
 
+    </div>
+
+    <!-- HISTORIAL DE ADQUISICIONES DE TESORERIA (Canjes con Puntos) -->
+    <div class="card" style="margin-top:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">
+        <b style="color:var(--gold-light)"><i class="ri-shopping-bag-3-line"></i> Items Canjeados (Historial de Tesorería)</b>
+        <span class="badge badge-red" style="font-size:0.85rem">Total Gastado: -${window.fmt(spentPts)} <small>pts</small></span>
+      </div>
+      ${memberAcquisitions.length ? `
+        <div class="table-wrap" style="margin-top:10px;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+            <thead>
+              <tr style="text-align:left; border-bottom:1px solid var(--border); color:var(--text3);">
+                <th style="padding:8px 4px;">Fecha de Canje</th>
+                <th style="padding:8px 4px;">Item L2</th>
+                <th style="padding:8px 4px; text-align:right;">Costo</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${memberAcquisitions.map(a => `
+                <tr style="border-bottom:1px dashed var(--border);">
+                  <td style="padding:8px 4px; color:var(--text2);">${a.deliveredAt ? window.fmtDate(a.deliveredAt) : '—'}</td>
+                  <td style="padding:8px 4px; font-weight:600; color:var(--gold-light);">${a.itemName}</td>
+                  <td style="padding:8px 4px; text-align:right; font-weight:bold; color:var(--red); font-size:0.95rem;">-${a.pointsCost} pts</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      ` : `<div class="empty-state" style="padding:20px 0"><i class="ri-shopping-bag-3-line"></i><p>Sin ítems canjeados de la tesorería todavía</p></div>`}
     </div>
   `;
 };
@@ -1018,4 +1084,4 @@ window.addLoanFor = (id) => {
 };
 
 // ── IMPORT ADDITIONAL MODULES ────────────────────────────
-import("./app2.js?v=16");
+import("./app2.js?v=17");

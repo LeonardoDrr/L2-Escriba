@@ -1206,7 +1206,7 @@
             <div class="nav-item admin-item" data-page="warehouse"><i class="ri-archive-2-line"></i>Almacén</div>
             <div class="nav-item" data-page="crafts"><i class="ri-hammer-line"></i>Crafts</div>
             <div class="nav-section">Finanzas</div>
-            <div class="nav-item admin-item" data-page="treasury"><i class="ri-coin-line"></i>Tesorería</div>
+            <div class="nav-item admin-item" data-page="treasury"><i class="ri-shopping-bag-3-line"></i>Adquisiciones</div>
             <div class="nav-item admin-item" data-page="loans"><i class="ri-hand-coin-line"></i>Préstamos <span class="nav-badge"
                     id="loans-badge" style="display:none">0</span></div>
             <div class="nav-item" data-page="desired"><i class="ri-heart-add-line"></i>Deseado <span class="nav-badge"
@@ -1346,6 +1346,11 @@
         function weeklyMissions() { if (window.weeklyMissions) window.weeklyMissions(); }
         function toggleDelivery(missionId, memberId, val) { if (window.toggleDelivery) window.toggleDelivery(missionId, memberId, val); }
         function delWeeklyMission(id) { if (window.delWeeklyMission) window.delWeeklyMission(id); }
+        function editTx(id) { if (window.editTx) window.editTx(id); }
+        function addTransaction() { if (window.addTransaction) window.addTransaction(); }
+        function assignItem(id) { if (window.assignItem) window.assignItem(id); }
+        function unassignItem(id) { if (window.unassignItem) window.unassignItem(id); }
+        function updateAssignMemberPoints() { if (window.updateAssignMemberPoints) window.updateAssignMemberPoints(); }
     </script>
 
     <script>
