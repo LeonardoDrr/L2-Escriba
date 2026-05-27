@@ -1084,4 +1084,4 @@ window.addLoanFor = (id) => {
 };
 
 // ── IMPORT ADDITIONAL MODULES ────────────────────────────
-import("./app2.js?v=17");
+import("./app2.js?v=18");

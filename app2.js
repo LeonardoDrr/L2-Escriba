@@ -1156,8 +1156,8 @@ window.treasury = function () {
 
   document.getElementById("content").innerHTML = `
     <div class="stats-grid" style="margin-bottom:16px">
-      <div class="stat-card"><div class="stat-icon">📜</div><div class="stat-label">Total Adquisiciones Registradas</div><div class="stat-value" style="color:var(--gold-light);font-size:1.1rem">${window.STATE.treasury.length}</div></div>
-      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-label">Items Asignados</div><div class="stat-value" style="color:var(--green);font-size:1.1rem">${(window.STATE.acquisitions || []).length}</div></div>
+      <div class="stat-card"><div class="stat-icon"><i class="ri-file-list-3-line"></i></div><div class="stat-label">Total Adquisiciones Registradas</div><div class="stat-value" style="color:var(--gold-light);font-size:1.1rem">${window.STATE.treasury.length}</div></div>
+      <div class="stat-card"><div class="stat-icon"><i class="ri-checkbox-circle-line"></i></div><div class="stat-label">Items Asignados</div><div class="stat-value" style="color:var(--green);font-size:1.1rem">${(window.STATE.acquisitions || []).length}</div></div>
     </div>
     <div class="filters">
       <input class="search-input" id="tr-q" placeholder="🔍 Buscar..." oninput="treasury()" value="${q}">
@@ -1345,10 +1345,10 @@ window.updateAssignMemberPoints = function () {
   const remaining = ptsInfo.balance - cost;
   
   if (remaining >= 0) {
-    ptsContainer.innerHTML = `Saldo actual: ${ptsInfo.balance} pts <br> <span style="color:var(--green)">Quedará en: ${remaining} pts (Suficiente) ✅</span>`;
+    ptsContainer.innerHTML = `Saldo actual: ${ptsInfo.balance} pts <br> <span style="color:var(--green); display:inline-flex; align-items:center; gap:4px;"><i class="ri-checkbox-circle-line"></i> Quedará en: ${remaining} pts (Suficiente)</span>`;
     ptsContainer.style.color = "var(--green)";
   } else {
-    ptsContainer.innerHTML = `Saldo actual: ${ptsInfo.balance} pts <br> <span style="color:var(--red)">Faltan: ${Math.abs(remaining)} pts (Insuficiente) ❌</span>`;
+    ptsContainer.innerHTML = `Saldo actual: ${ptsInfo.balance} pts <br> <span style="color:var(--red); display:inline-flex; align-items:center; gap:4px;"><i class="ri-close-circle-line"></i> Faltan: ${Math.abs(remaining)} pts (Insuficiente)</span>`;
     ptsContainer.style.color = "var(--red)";
   }
 };
